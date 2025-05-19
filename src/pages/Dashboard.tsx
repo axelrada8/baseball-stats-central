@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -40,6 +39,24 @@ const translations = {
     darkMode: "Modo Oscuro",
     language: "Idioma",
     saveStats: "Guardar Estadísticas",
+    playerInfo: "Información del Jugador",
+    name: "Nombre",
+    position: "Posición",
+    team: "Equipo",
+    photo: "Foto",
+    stats: "Estadísticas Ofensivas",
+    statLabels: {
+      AB: "Veces al Bate",
+      H: "Hits",
+      doubles: "Dobles",
+      triples: "Triples",
+      HR: "Jonrones",
+      RBI: "Carreras Impulsadas",
+      R: "Carreras Anotadas",
+      BB: "Bases por Bola",
+      K: "Ponches",
+      SB: "Bases Robadas"
+    },
     advancedStats: "Estadísticas Avanzadas",
     avg: {
       title: "AVG",
@@ -69,6 +86,24 @@ const translations = {
     darkMode: "Dark Mode",
     language: "Language",
     saveStats: "Save Statistics",
+    playerInfo: "Player Information",
+    name: "Name",
+    position: "Position",
+    team: "Team",
+    photo: "Photo",
+    stats: "Offensive Statistics",
+    statLabels: {
+      AB: "At Bats",
+      H: "Hits",
+      doubles: "Doubles",
+      triples: "Triples",
+      HR: "Home Runs",
+      RBI: "Runs Batted In",
+      R: "Runs",
+      BB: "Walks",
+      K: "Strikeouts",
+      SB: "Stolen Bases"
+    },
     advancedStats: "Advanced Statistics",
     avg: {
       title: "AVG",
@@ -118,7 +153,7 @@ export default function Dashboard() {
   const [language, setLanguage] = useState<"es" | "en">("es");
   const t = translations[language];
 
-  // Efecto para manejar el modo oscuro
+  // Efecto para manejar el modo oscuro - updated to use BeatStars-like dark mode
   useEffect(() => {
     if (darkMode) {
       document.documentElement.classList.add('dark');
@@ -196,58 +231,136 @@ export default function Dashboard() {
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
     
-    // Título
-    doc.setFontSize(20);
-    doc.text(t.title, pageWidth / 2, 20, { align: 'center' });
+    // Improved PDF template with centered title and line design
+    // Header with lines
+    doc.setLineWidth(0.5);
+    doc.line(20, 15, pageWidth - 20, 15); // Top line
     
-    // Información del jugador
+    // Title
+    doc.setFontSize(22);
+    doc.setFont("helvetica", "bold");
+    doc.text(t.title, pageWidth / 2, 25, { align: 'center' });
+    
+    doc.setLineWidth(0.5);
+    doc.line(20, 30, pageWidth - 20, 30); // Bottom line of title
+    
+    // Player information section
     doc.setFontSize(16);
-    doc.text(`${player.name || "Sin nombre"}`, 20, 40);
+    doc.setFont("helvetica", "bold");
+    doc.text(`${t.playerInfo}:`, 20, 45);
+    
+    doc.setLineWidth(0.2);
+    doc.line(20, 48, 100, 48); // Underline section title
+    
     doc.setFontSize(12);
-    doc.text(`${player.position || "Sin posición"} - ${player.team || "Sin equipo"}`, 20, 50);
+    doc.setFont("helvetica", "normal");
     
-    // Estadísticas básicas
-    doc.setFontSize(14);
-    doc.text("Estadísticas:", 20, 70);
-    
-    const stats = [
-      `AB: ${player.stats.AB}`,
-      `H: ${player.stats.H}`,
-      `2B: ${player.stats.doubles}`,
-      `3B: ${player.stats.triples}`,
-      `HR: ${player.stats.HR}`,
-      `RBI: ${player.stats.RBI}`,
-      `R: ${player.stats.R}`,
-      `BB: ${player.stats.BB}`,
-      `K: ${player.stats.K}`,
-      `SB: ${player.stats.SB}`
+    // Player data with field labels
+    const playerInfo = [
+      `${t.name}: ${player.name || "-"}`,
+      `${t.position}: ${player.position || "-"}`,
+      `${t.team}: ${player.team || "-"}`
     ];
     
-    let y = 80;
-    stats.forEach(stat => {
-      doc.text(stat, 20, y);
-      y += 10;
+    let y = 55;
+    playerInfo.forEach(info => {
+      doc.text(info, 25, y);
+      y += 7;
     });
     
-    // Estadísticas avanzadas
-    doc.setFontSize(14);
-    doc.text("Estadísticas avanzadas:", 120, 70);
+    // Basic stats section
+    doc.setFontSize(16);
+    doc.setFont("helvetica", "bold");
+    doc.text(`${t.stats}:`, 20, 85);
     
+    doc.setLineWidth(0.2);
+    doc.line(20, 88, 100, 88); // Underline section title
+    
+    // Stats in two columns with borders
+    const basicStats = [
+      [`AB: ${player.stats.AB}`, `H: ${player.stats.H}`],
+      [`2B: ${player.stats.doubles}`, `3B: ${player.stats.triples}`],
+      [`HR: ${player.stats.HR}`, `RBI: ${player.stats.RBI}`],
+      [`R: ${player.stats.R}`, `BB: ${player.stats.BB}`],
+      [`K: ${player.stats.K}`, `SB: ${player.stats.SB}`]
+    ];
+    
+    // Draw stats in a table-like format
+    y = 95;
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "normal");
+    
+    // Create a light gray background for the stats table
+    doc.setFillColor(245, 245, 245);
+    doc.rect(25, y-5, 160, 50, 'F');
+    
+    // Draw table borders
+    doc.setDrawColor(180, 180, 180);
+    doc.setLineWidth(0.1);
+    doc.rect(25, y-5, 160, 50);
+    
+    // Draw horizontal lines
+    for (let i = 1; i < 5; i++) {
+      doc.line(25, y-5+i*10, 185, y-5+i*10);
+    }
+    
+    // Draw vertical line in middle
+    doc.line(105, y-5, 105, y+45);
+    
+    // Add stats text
+    basicStats.forEach((row, index) => {
+      doc.text(row[0], 30, y + index * 10);
+      doc.text(row[1], 110, y + index * 10);
+    });
+    
+    // Advanced stats section
+    doc.setFontSize(16);
+    doc.setFont("helvetica", "bold");
+    doc.text(`${t.advancedStats}:`, 20, 155);
+    
+    doc.setLineWidth(0.2);
+    doc.line(20, 158, 120, 158); // Underline section title
+    
+    // Create another table for advanced stats
     const advancedStats = [
-      `AVG: ${calcAVG()}`,
-      `OBP: ${calcOBP()}`,
-      `SLG: ${calcSLG()}`,
-      `OPS: ${calcOPS()}`
+      [`${t.avg.title}: ${calcAVG()}`, `${t.obp.title}: ${calcOBP()}`],
+      [`${t.slg.title}: ${calcSLG()}`, `${t.ops.title}: ${calcOPS()}`]
     ];
     
-    y = 80;
-    advancedStats.forEach(stat => {
-      doc.text(stat, 120, y);
-      y += 10;
+    // Draw advanced stats in a table-like format
+    y = 165;
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "normal");
+    
+    // Create a light blue background for the advanced stats
+    doc.setFillColor(235, 245, 255);
+    doc.rect(25, y-5, 160, 25, 'F');
+    
+    // Draw table borders
+    doc.setDrawColor(180, 180, 180);
+    doc.setLineWidth(0.1);
+    doc.rect(25, y-5, 160, 25);
+    
+    // Draw horizontal line
+    doc.line(25, y+5, 185, y+5);
+    
+    // Draw vertical line in middle
+    doc.line(105, y-5, 105, y+20);
+    
+    // Add advanced stats text
+    advancedStats.forEach((row, index) => {
+      doc.text(row[0], 30, y + index * 10);
+      doc.text(row[1], 110, y + index * 10);
     });
     
-    // Guardar PDF
-    doc.save(`${player.name || "jugador"}_stats.pdf`);
+    // Add timestamp at the bottom
+    const today = new Date();
+    doc.setFontSize(9);
+    doc.setTextColor(100, 100, 100);
+    doc.text(`${today.toLocaleDateString()} - ${player.name || "Player"} Stats Report`, pageWidth / 2, 280, { align: 'center' });
+    
+    // Save PDF
+    doc.save(`${player.name || "player"}_stats.pdf`);
     
     toast({
       title: t.exportSuccess,
@@ -308,7 +421,7 @@ export default function Dashboard() {
 
       <PlayerCard player={player} onPlayerChange={handlePlayerChange} />
       
-      <StatsForm stats={player.stats} onStatsChange={handleStatsChange} />
+      <StatsForm stats={player.stats} onStatsChange={handleStatsChange} language={language} translations={translations} />
 
       <Card className="bg-white dark:bg-gray-800 shadow-md hover:shadow-lg transition-shadow duration-300">
         <CardHeader>
