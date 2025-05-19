@@ -1,13 +1,15 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Toggle, toggleVariants } from "@/components/ui/toggle";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { Download, Globe } from "lucide-react";
+import { Download, Globe, CalendarDays } from "lucide-react";
 import { jsPDF } from "jspdf";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
 import PlayerCard from "@/components/PlayerCard";
 import StatsForm from "@/components/StatsForm";
 
@@ -27,6 +29,7 @@ interface PlayerStats {
     BB: number;
     K: number;
     SB: number;
+    date?: Date;
   };
 }
 
@@ -44,7 +47,14 @@ const translations = {
     position: "Posición",
     team: "Equipo",
     photo: "Foto",
+    photoRecommendation: "Tamaño recomendado: 400x400 píxeles",
+    adjustPhoto: "Ajustar Foto",
+    zoom: "Zoom",
+    apply: "Aplicar",
+    cancel: "Cancelar",
     stats: "Estadísticas Ofensivas",
+    date: "Fecha",
+    selectDate: "Seleccionar fecha",
     statLabels: {
       AB: "Veces al Bate",
       H: "Hits",
@@ -78,6 +88,8 @@ const translations = {
     statsSaved: "Estadísticas guardadas",
     statsSuccessfullySaved: "Tus estadísticas han sido guardadas correctamente.",
     exportSuccess: "PDF exportado correctamente",
+    allGames: "Todos los juegos",
+    filterByDate: "Filtrar por fecha"
   },
   en: {
     title: "⚾ Baseball Statistics",
@@ -91,7 +103,14 @@ const translations = {
     position: "Position",
     team: "Team",
     photo: "Photo",
+    photoRecommendation: "Recommended size: 400x400 pixels",
+    adjustPhoto: "Adjust Photo",
+    zoom: "Zoom",
+    apply: "Apply",
+    cancel: "Cancel",
     stats: "Offensive Statistics",
+    date: "Date",
+    selectDate: "Select date",
     statLabels: {
       AB: "At Bats",
       H: "Hits",
@@ -125,6 +144,8 @@ const translations = {
     statsSaved: "Statistics saved",
     statsSuccessfullySaved: "Your statistics have been saved successfully.",
     exportSuccess: "PDF exported successfully",
+    allGames: "All Games",
+    filterByDate: "Filter by date"
   }
 };
 
@@ -145,13 +166,20 @@ export default function Dashboard() {
       BB: 0,
       K: 0,
       SB: 0,
+      date: new Date(),
     },
   });
+  
   const { toast } = useToast();
   const [user, setUser] = useState<{ name?: string; email: string } | null>(null);
   const [darkMode, setDarkMode] = useState<boolean>(false);
   const [language, setLanguage] = useState<"es" | "en">("es");
   const t = translations[language];
+  
+  // Track all stats records
+  const [allStats, setAllStats] = useState<PlayerStats[]>([]);
+  const [filterDate, setFilterDate] = useState<Date | null>(null);
+  const [showAllStats, setShowAllStats] = useState(true);
 
   // Efecto para manejar el modo oscuro - updated to use BeatStars-like dark mode
   useEffect(() => {
@@ -188,6 +216,12 @@ export default function Dashboard() {
     if (storedPlayer) {
       setPlayer(JSON.parse(storedPlayer));
     }
+    
+    // Cargar historial de estadísticas
+    const storedStats = localStorage.getItem("playerStatsHistory");
+    if (storedStats) {
+      setAllStats(JSON.parse(storedStats));
+    }
   }, []);
 
   const handleLogout = () => {
@@ -199,6 +233,8 @@ export default function Dashboard() {
     const { name, value, files } = e.target;
     if (name === "photo" && files && files.length > 0) {
       setPlayer({ ...player, photo: URL.createObjectURL(files[0]) });
+    } else if (name === "photo" && value) { // For our custom photo handler
+      setPlayer({ ...player, photo: value });
     } else {
       setPlayer({ ...player, [name]: value });
     }
@@ -212,8 +248,25 @@ export default function Dashboard() {
     });
   };
 
+  const handleDateChange = (date: Date | undefined) => {
+    setPlayer({
+      ...player,
+      stats: { ...player.stats, date: date }
+    });
+  };
+
   const saveStats = () => {
+    // Create a new entry with current date
+    const newEntry = { ...player };
+    
+    // Save current player state
     localStorage.setItem("playerStats", JSON.stringify(player));
+    
+    // Update history
+    const updatedStats = [...allStats, newEntry];
+    setAllStats(updatedStats);
+    localStorage.setItem("playerStatsHistory", JSON.stringify(updatedStats));
+    
     toast({
       title: t.statsSaved,
       description: t.statsSuccessfullySaved,
@@ -226,6 +279,45 @@ export default function Dashboard() {
       localStorage.setItem("language", value);
     }
   };
+  
+  const toggleFilter = (showAll: boolean) => {
+    setShowAllStats(showAll);
+    if (showAll) {
+      setFilterDate(null);
+    }
+  };
+  
+  const filterStatsByDate = () => {
+    if (showAllStats || !filterDate) {
+      return allStats;
+    }
+    
+    return allStats.filter(stat => {
+      if (!stat.stats.date) return false;
+      const statDate = new Date(stat.stats.date);
+      return statDate.toDateString() === filterDate.toDateString();
+    });
+  };
+  
+  const currentStats = filterStatsByDate();
+  
+  const calculateAggregateStats = () => {
+    if (currentStats.length === 0) {
+      return player.stats;
+    }
+    
+    // Combine all filtered stats
+    return currentStats.reduce((acc, curr) => {
+      Object.entries(curr.stats).forEach(([key, value]) => {
+        if (key !== 'date' && typeof value === 'number') {
+          acc[key] = (acc[key] || 0) + value;
+        }
+      });
+      return acc;
+    }, {} as Record<string, number>);
+  };
+  
+  const aggregateStats = calculateAggregateStats();
 
   const exportToPDF = () => {
     const doc = new jsPDF();
@@ -259,7 +351,8 @@ export default function Dashboard() {
     const playerInfo = [
       `${t.name}: ${player.name || "-"}`,
       `${t.position}: ${player.position || "-"}`,
-      `${t.team}: ${player.team || "-"}`
+      `${t.team}: ${player.team || "-"}`,
+      `${t.date}: ${player.stats.date ? format(new Date(player.stats.date), 'PP', { locale: language === "es" ? es : undefined }) : "-"}`
     ];
     
     let y = 55;
@@ -278,11 +371,11 @@ export default function Dashboard() {
     
     // Stats in two columns with borders
     const basicStats = [
-      [`AB: ${player.stats.AB}`, `H: ${player.stats.H}`],
-      [`2B: ${player.stats.doubles}`, `3B: ${player.stats.triples}`],
-      [`HR: ${player.stats.HR}`, `RBI: ${player.stats.RBI}`],
-      [`R: ${player.stats.R}`, `BB: ${player.stats.BB}`],
-      [`K: ${player.stats.K}`, `SB: ${player.stats.SB}`]
+      [`AB: ${aggregateStats.AB || 0}`, `H: ${aggregateStats.H || 0}`],
+      [`2B: ${aggregateStats.doubles || 0}`, `3B: ${aggregateStats.triples || 0}`],
+      [`HR: ${aggregateStats.HR || 0}`, `RBI: ${aggregateStats.RBI || 0}`],
+      [`R: ${aggregateStats.R || 0}`, `BB: ${aggregateStats.BB || 0}`],
+      [`K: ${aggregateStats.K || 0}`, `SB: ${aggregateStats.SB || 0}`]
     ];
     
     // Draw stats in a table-like format
@@ -323,8 +416,8 @@ export default function Dashboard() {
     
     // Create another table for advanced stats
     const advancedStats = [
-      [`${t.avg.title}: ${calcAVG()}`, `${t.obp.title}: ${calcOBP()}`],
-      [`${t.slg.title}: ${calcSLG()}`, `${t.ops.title}: ${calcOPS()}`]
+      [`${t.avg.title}: ${calcAVG(aggregateStats)}`, `${t.obp.title}: ${calcOBP(aggregateStats)}`],
+      [`${t.slg.title}: ${calcSLG(aggregateStats)}`, `${t.ops.title}: ${calcOPS(aggregateStats)}`]
     ];
     
     // Draw advanced stats in a table-like format
@@ -357,7 +450,7 @@ export default function Dashboard() {
     const today = new Date();
     doc.setFontSize(9);
     doc.setTextColor(100, 100, 100);
-    doc.text(`${today.toLocaleDateString()} - ${player.name || "Player"} Stats Report`, pageWidth / 2, 280, { align: 'center' });
+    doc.text(`${today.toLocaleDateString(language === "es" ? "es-ES" : "en-US")} - ${player.name || "Player"} Stats Report`, pageWidth / 2, 280, { align: 'center' });
     
     // Save PDF
     doc.save(`${player.name || "player"}_stats.pdf`);
@@ -368,23 +461,31 @@ export default function Dashboard() {
     });
   };
 
-  const calcAVG = () => player.stats.AB ? (player.stats.H / player.stats.AB).toFixed(3) : "0.000";
+  const calcAVG = (stats: Record<string, number>) => {
+    return stats.AB ? (stats.H / stats.AB).toFixed(3) : "0.000";
+  };
   
-  const calcOBP = () => {
-    const { H, BB, AB } = player.stats;
+  const calcOBP = (stats: Record<string, number>) => {
+    const H = stats.H || 0;
+    const BB = stats.BB || 0;
+    const AB = stats.AB || 0;
     return (AB + BB) ? ((H + BB) / (AB + BB)).toFixed(3) : "0.000";
   };
   
-  const calcSLG = () => {
-    const { H, doubles, triples, HR, AB } = player.stats;
+  const calcSLG = (stats: Record<string, number>) => {
+    const H = stats.H || 0;
+    const doubles = stats.doubles || 0;
+    const triples = stats.triples || 0;
+    const HR = stats.HR || 0;
+    const AB = stats.AB || 0;
     const singles = H - doubles - triples - HR;
     const totalBases = singles + 2 * doubles + 3 * triples + 4 * HR;
     return AB ? (totalBases / AB).toFixed(3) : "0.000";
   };
   
-  const calcOPS = () => {
-    const obp = parseFloat(calcOBP());
-    const slg = parseFloat(calcSLG());
+  const calcOPS = (stats: Record<string, number>) => {
+    const obp = parseFloat(calcOBP(stats));
+    const slg = parseFloat(calcSLG(stats));
     return (obp + slg).toFixed(3);
   };
 
@@ -419,9 +520,64 @@ export default function Dashboard() {
         </div>
       </header>
 
-      <PlayerCard player={player} onPlayerChange={handlePlayerChange} />
+      <PlayerCard player={player} onPlayerChange={handlePlayerChange} language={language} translations={translations} />
       
-      <StatsForm stats={player.stats} onStatsChange={handleStatsChange} language={language} translations={translations} />
+      <div className="mb-4 flex gap-2 items-center justify-end">
+        <Button 
+          variant={showAllStats ? "default" : "outline"} 
+          size="sm"
+          onClick={() => toggleFilter(true)}
+        >
+          {t.allGames}
+        </Button>
+        
+        <Button 
+          variant={!showAllStats ? "default" : "outline"}
+          size="sm"
+          onClick={() => toggleFilter(false)}
+        >
+          {t.filterByDate}
+        </Button>
+        
+        {!showAllStats && (
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className={cn(
+                  "w-[180px] justify-start text-left",
+                  !filterDate && "text-muted-foreground"
+                )}
+              >
+                <CalendarDays className="mr-2 h-4 w-4" />
+                {filterDate ? (
+                  format(filterDate, "PPP", { locale: language === "es" ? es : undefined })
+                ) : (
+                  <span>{t.selectDate}</span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={filterDate || undefined}
+                onSelect={(date) => setFilterDate(date)}
+                initialFocus
+                className="p-3 pointer-events-auto"
+              />
+            </PopoverContent>
+          </Popover>
+        )}
+      </div>
+      
+      <StatsForm 
+        stats={player.stats} 
+        onStatsChange={handleStatsChange} 
+        onDateChange={handleDateChange}
+        language={language} 
+        translations={translations} 
+      />
 
       <Card className="bg-white dark:bg-gray-800 shadow-md hover:shadow-lg transition-shadow duration-300">
         <CardHeader>
@@ -430,22 +586,22 @@ export default function Dashboard() {
         <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-6 p-6">
           <div className="stat-card bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900 dark:to-blue-800 p-4 rounded-lg border shadow-sm text-center">
             <h2 className="text-lg font-bold text-blue-700 dark:text-blue-300">{t.avg.title}</h2>
-            <p className="text-3xl font-semibold">{calcAVG()}</p>
+            <p className="text-3xl font-semibold">{calcAVG(aggregateStats)}</p>
             <p className="text-sm text-muted-foreground mt-1">{t.avg.description}</p>
           </div>
           <div className="stat-card bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900 dark:to-green-800 p-4 rounded-lg border shadow-sm text-center">
             <h2 className="text-lg font-bold text-green-700 dark:text-green-300">{t.obp.title}</h2>
-            <p className="text-3xl font-semibold">{calcOBP()}</p>
+            <p className="text-3xl font-semibold">{calcOBP(aggregateStats)}</p>
             <p className="text-sm text-muted-foreground mt-1">{t.obp.description}</p>
           </div>
           <div className="stat-card bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900 dark:to-purple-800 p-4 rounded-lg border shadow-sm text-center">
             <h2 className="text-lg font-bold text-purple-700 dark:text-purple-300">{t.slg.title}</h2>
-            <p className="text-3xl font-semibold">{calcSLG()}</p>
+            <p className="text-3xl font-semibold">{calcSLG(aggregateStats)}</p>
             <p className="text-sm text-muted-foreground mt-1">{t.slg.description}</p>
           </div>
           <div className="stat-card bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900 dark:to-red-800 p-4 rounded-lg border shadow-sm text-center">
             <h2 className="text-lg font-bold text-red-700 dark:text-red-300">{t.ops.title}</h2>
-            <p className="text-3xl font-semibold">{calcOPS()}</p>
+            <p className="text-3xl font-semibold">{calcOPS(aggregateStats)}</p>
             <p className="text-sm text-muted-foreground mt-1">{t.ops.description}</p>
           </div>
         </CardContent>
