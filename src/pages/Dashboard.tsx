@@ -37,7 +37,7 @@ export default function Dashboard() {
       doubles: 0,
       triples: 0,
       HR: 0,
-      RBI: number: 0,
+      RBI: 0,
       R: 0,
       BB: 0,
       K: 0,
