@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
+import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogClose, DialogFooter } from "@/components/ui/dialog";
 
 interface PlayerData {
   name: string;
@@ -56,6 +57,7 @@ export default function PlayerCard({ player, onPlayerChange, language, translati
   const [tempPhoto, setTempPhoto] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [showPhotoDialog, setShowPhotoDialog] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageRef = useRef<HTMLDivElement>(null);
@@ -69,7 +71,7 @@ export default function PlayerCard({ player, onPlayerChange, language, translati
       const img = new Image();
       img.onload = function() {
         if (img.width < 500 || img.height < 500) {
-          alert(`${t.photoRecommendation} (500x500)`);
+          alert(`${t.photoRecommendation}`);
         }
         URL.revokeObjectURL(img.src);
       };
@@ -78,7 +80,7 @@ export default function PlayerCard({ player, onPlayerChange, language, translati
       setTempPhoto(url);
       setPosition({ x: 0, y: 0 });
       setZoom(100);
-      setIsAdjusting(true);
+      setShowPhotoDialog(true); // Show dialog for adjustment
     } else {
       onPlayerChange(e);
     }
@@ -102,10 +104,12 @@ export default function PlayerCard({ player, onPlayerChange, language, translati
     } as unknown as React.ChangeEvent<HTMLInputElement>;
     
     onPlayerChange(photoEvent);
+    setShowPhotoDialog(false);
     setIsAdjusting(false);
   };
 
   const cancelPhotoChanges = () => {
+    setShowPhotoDialog(false);
     setIsAdjusting(false);
     setTempPhoto(null);
     setZoom(100);
@@ -138,7 +142,8 @@ export default function PlayerCard({ player, onPlayerChange, language, translati
   const handleMouseMove = (e: React.MouseEvent) => {
     if (!isDragging || !isAdjusting) return;
     
-    const maxOffset = (zoom / 100 - 1) * 100;
+    // Allow more movement based on zoom level
+    const maxOffset = zoom; // Scale the movement range with zoom
     const newX = Math.max(Math.min(e.clientX - dragStart.x, maxOffset), -maxOffset);
     const newY = Math.max(Math.min(e.clientY - dragStart.y, maxOffset), -maxOffset);
     
@@ -152,7 +157,7 @@ export default function PlayerCard({ player, onPlayerChange, language, translati
     if (!isDragging || !isAdjusting) return;
     
     const touch = e.touches[0];
-    const maxOffset = (zoom / 100 - 1) * 100;
+    const maxOffset = zoom; // Scale the movement range with zoom
     const newX = Math.max(Math.min(touch.clientX - dragStart.x, maxOffset), -maxOffset);
     const newY = Math.max(Math.min(touch.clientY - dragStart.y, maxOffset), -maxOffset);
     
@@ -180,42 +185,30 @@ export default function PlayerCard({ player, onPlayerChange, language, translati
   const handleButtonClick = () => {
     fileInputRef.current?.click();
   };
+  
+  // Enable adjusting when dialog is shown
+  useEffect(() => {
+    if (showPhotoDialog) {
+      setIsAdjusting(true);
+    }
+  }, [showPhotoDialog]);
 
   return (
-    <Card className="mb-6 bg-white dark:bg-gray-800 shadow-md hover:shadow-lg transition-shadow duration-300">
+    <Card className="mb-6 bg-white dark:bg-gray-900 shadow-md hover:shadow-lg transition-shadow duration-300">
       <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4 p-6">
         <div className="flex flex-col items-center justify-center">
           <Label className="mb-2 text-lg font-medium">{t.photo}</Label>
           <div className="relative mb-4 w-40 h-40">
             <div 
               className="w-40 h-40 rounded-full overflow-hidden player-photo"
-              onMouseDown={handleMouseDown}
-              onTouchStart={handleTouchStart}
-              onMouseMove={handleMouseMove}
-              onTouchMove={handleTouchMove}
               ref={imageRef}
-              style={{ cursor: isAdjusting ? 'move' : 'default' }}
             >
-              {isAdjusting && tempPhoto ? (
-                <div className="w-full h-full overflow-hidden">
-                  <img 
-                    src={tempPhoto} 
-                    alt="Preview" 
-                    className="object-cover w-full h-full"
-                    style={{ 
-                      transform: `scale(${zoom / 100}) translate(${position.x / (zoom / 100)}px, ${position.y / (zoom / 100)}px)`,
-                      transformOrigin: 'center'
-                    }}
-                  />
-                </div>
-              ) : (
-                <Avatar className="w-full h-full">
-                  <AvatarImage src={player.photo || ''} alt={player.name} />
-                  <AvatarFallback className="bg-primary/20 text-primary">
-                    {player.name ? player.name.charAt(0).toUpperCase() : 'J'}
-                  </AvatarFallback>
-                </Avatar>
-              )}
+              <Avatar className="w-full h-full">
+                <AvatarImage src={player.photo || ''} alt={player.name} />
+                <AvatarFallback className="bg-primary/20 text-primary">
+                  {player.name ? player.name.charAt(0).toUpperCase() : 'J'}
+                </AvatarFallback>
+              </Avatar>
             </div>
             <div className="absolute -bottom-2 -right-2">
               <div className="relative overflow-hidden bg-primary hover:bg-primary/80 text-white p-2 rounded-full cursor-pointer transition-colors">
@@ -236,38 +229,62 @@ export default function PlayerCard({ player, onPlayerChange, language, translati
           </div>
           
           <p className="text-xs text-muted-foreground mt-1 text-center">
-            {t.photoRecommendation} (500x500)
+            {t.photoRecommendation}
           </p>
           
-          {isAdjusting && (
-            <div className="w-full max-w-xs mt-4 space-y-4">
-              <div>
-                <Label htmlFor="zoom-slider" className="text-sm font-medium">
-                  {t.zoom}: {zoom}%
-                </Label>
-                <Slider
-                  id="zoom-slider"
-                  min={100}
-                  max={200}
-                  step={5}
-                  value={[zoom]}
-                  onValueChange={handleZoomChange}
-                  className="mt-1"
-                />
+          <Dialog open={showPhotoDialog} onOpenChange={setShowPhotoDialog}>
+            <DialogContent className="sm:max-w-md">
+              <DialogTitle>{t.adjustPhoto}</DialogTitle>
+              <div className="flex flex-col items-center justify-center">
+                <div 
+                  className="w-64 h-64 rounded-full overflow-hidden player-photo photo-container"
+                  onMouseDown={handleMouseDown}
+                  onTouchStart={handleTouchStart}
+                  onMouseMove={handleMouseMove}
+                  onTouchMove={handleTouchMove}
+                  style={{ cursor: 'move' }}
+                >
+                  {tempPhoto && (
+                    <div className="w-full h-full overflow-hidden">
+                      <img 
+                        src={tempPhoto} 
+                        alt="Preview" 
+                        className="object-cover w-full h-full"
+                        style={{ 
+                          transform: `scale(${zoom / 100}) translate(${position.x / (zoom / 50)}px, ${position.y / (zoom / 50)}px)`,
+                          transformOrigin: 'center'
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
+                
+                <div className="w-full max-w-xs mt-6 space-y-4">
+                  <div>
+                    <Label htmlFor="zoom-slider" className="text-sm font-medium">
+                      {t.zoom}: {zoom}%
+                    </Label>
+                    <Slider
+                      id="zoom-slider"
+                      min={100}
+                      max={300}
+                      step={5}
+                      value={[zoom]}
+                      onValueChange={handleZoomChange}
+                      className="mt-2"
+                    />
+                  </div>
+                  <p className="text-xs text-center text-muted-foreground">
+                    {t.movePhoto}
+                  </p>
+                </div>
               </div>
-              <p className="text-xs text-center text-muted-foreground">
-                {t.movePhoto}
-              </p>
-              <div className="flex gap-2 justify-center mt-2">
-                <Button size="sm" variant="outline" onClick={cancelPhotoChanges}>
-                  {t.cancel}
-                </Button>
-                <Button size="sm" onClick={applyPhotoChanges}>
-                  {t.apply}
-                </Button>
-              </div>
-            </div>
-          )}
+              <DialogFooter className="flex justify-between gap-2 mt-4">
+                <Button variant="outline" onClick={cancelPhotoChanges}>{t.cancel}</Button>
+                <Button onClick={applyPhotoChanges}>{t.apply}</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
         <div className="grid gap-4">
           <div>

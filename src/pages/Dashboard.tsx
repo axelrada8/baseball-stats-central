@@ -96,7 +96,9 @@ const translations = {
     reset: "Reiniciar Datos",
     resetConfirm: "¿Estás seguro?",
     resetSuccess: "Datos reiniciados correctamente",
-    noDataForDate: "No hay datos para esta fecha"
+    noDataForDate: "No hay datos para esta fecha",
+    resetWarning: "Se perderán todos los datos guardados anteriormente. ¿Estás seguro de que quieres continuar?",
+    confirmDelete: "Sí, borrar todo"
   },
   en: {
     title: "⚾ Baseball Statistics",
@@ -159,7 +161,9 @@ const translations = {
     reset: "Reset Data",
     resetConfirm: "Are you sure?",
     resetSuccess: "Data reset successfully",
-    noDataForDate: "No data for this date"
+    noDataForDate: "No data for this date",
+    resetWarning: "All previously saved data will be lost. Are you sure you want to continue?",
+    confirmDelete: "Yes, delete all"
   }
 };
 
@@ -195,8 +199,9 @@ export default function Dashboard() {
   const [allStats, setAllStats] = useState<PlayerStats[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [showDayStats, setShowDayStats] = useState(false);
+  const [dayStats, setDayStats] = useState<PlayerStats["stats"] | null>(null);
 
-  // Efecto para manejar el modo oscuro - updated to use BeatStars-like dark mode
+  // Efecto para manejar el modo oscuro - updated to use true black dark mode
   useEffect(() => {
     if (darkMode) {
       document.documentElement.classList.add('dark');
@@ -331,14 +336,19 @@ export default function Dashboard() {
     setSelectedDate(player.stats.date);
     setShowDayStats(true);
     
-    // Check if there are any stats for this date
-    const hasDataForDate = allStats.some(stat => {
+    // Find stats for this specific date
+    const statsForDay = allStats.filter(stat => {
       if (!stat.stats.date) return false;
       const statDate = new Date(stat.stats.date);
       return statDate.toDateString() === player.stats.date?.toDateString();
     });
     
-    if (!hasDataForDate) {
+    if (statsForDay.length > 0) {
+      // Calculate aggregate stats for this day
+      const daySummary = calculateAggregateStatsForEntries(statsForDay);
+      setDayStats(daySummary);
+    } else {
+      setDayStats(null);
       toast({
         title: t.noDataForDate,
         description: format(player.stats.date, "PPP", { locale: language === "es" ? es : undefined }),
@@ -347,55 +357,54 @@ export default function Dashboard() {
   };
 
   const resetStats = () => {
-    if (confirm(t.resetConfirm)) {
-      // Clear all stats
-      setAllStats([]);
-      localStorage.removeItem("playerStatsHistory");
-      
-      // Reset current stats
-      setPlayer({
-        ...player,
-        stats: {
-          AB: 0,
-          H: 0,
-          doubles: 0,
-          triples: 0,
-          HR: 0,
-          RBI: 0,
-          R: 0,
-          BB: 0,
-          K: 0,
-          SB: 0,
-          date: new Date()
-        }
-      });
-      
-      localStorage.setItem("playerStats", JSON.stringify({
-        ...player,
-        stats: {
-          AB: 0,
-          H: 0,
-          doubles: 0,
-          triples: 0,
-          HR: 0,
-          RBI: 0,
-          R: 0,
-          BB: 0,
-          K: 0,
-          SB: 0,
-          date: new Date()
-        }
-      }));
-      
-      // Reset UI state
-      setShowDayStats(false);
-      setSelectedDate(null);
-      setDataModified(false);
-      
-      toast({
-        title: t.resetSuccess,
-      });
-    }
+    // Clear all stats
+    setAllStats([]);
+    localStorage.removeItem("playerStatsHistory");
+    
+    // Reset current stats
+    setPlayer({
+      ...player,
+      stats: {
+        AB: 0,
+        H: 0,
+        doubles: 0,
+        triples: 0,
+        HR: 0,
+        RBI: 0,
+        R: 0,
+        BB: 0,
+        K: 0,
+        SB: 0,
+        date: new Date()
+      }
+    });
+    
+    localStorage.setItem("playerStats", JSON.stringify({
+      ...player,
+      stats: {
+        AB: 0,
+        H: 0,
+        doubles: 0,
+        triples: 0,
+        HR: 0,
+        RBI: 0,
+        R: 0,
+        BB: 0,
+        K: 0,
+        SB: 0,
+        date: new Date()
+      }
+    }));
+    
+    // Reset UI state
+    setShowDayStats(false);
+    setSelectedDate(null);
+    setDataModified(false);
+    setDayStats(null);
+    
+    toast({
+      title: t.resetSuccess,
+    });
   };
 
   const handleLanguageChange = (value: string) => {
@@ -420,9 +429,9 @@ export default function Dashboard() {
   
   const currentStats = useMemo(() => filterStatsByDate(), [allStats, showDayStats, selectedDate]);
   
-  const calculateAggregateStats = () => {
-    if (currentStats.length === 0) {
-      // Return empty stats if there are no entries
+  // Helper function to calculate aggregate stats for a set of entries
+  const calculateAggregateStatsForEntries = (entries: PlayerStats[]) => {
+    if (entries.length === 0) {
       return {
         AB: 0,
         H: 0,
@@ -437,9 +446,8 @@ export default function Dashboard() {
       };
     }
     
-    // Combine all filtered stats
     const aggregated: Record<string, number> = {};
-    currentStats.forEach(stat => {
+    entries.forEach(stat => {
       Object.entries(stat.stats).forEach(([key, value]) => {
         if (key !== 'date' && typeof value === 'number') {
           aggregated[key] = (aggregated[key] || 0) + value;
@@ -450,7 +458,9 @@ export default function Dashboard() {
     return aggregated;
   };
   
-  const aggregateStats = useMemo(() => calculateAggregateStats(), [currentStats]);
+  const aggregateStats = useMemo(() => {
+    return calculateAggregateStatsForEntries(currentStats);
+  }, [currentStats]);
 
   const exportToPDF = () => {
     const doc = new jsPDF();
@@ -665,9 +675,11 @@ export default function Dashboard() {
         onSearchDay={searchDayStats}
         onResetStats={resetStats}
         dataModified={dataModified}
+        dayStats={dayStats || undefined}
+        isShowingDayStats={showDayStats}
       />
 
-      <Card className="bg-white dark:bg-gray-800 shadow-md hover:shadow-lg transition-shadow duration-300">
+      <Card className="bg-white dark:bg-gray-900 shadow-md hover:shadow-lg transition-shadow duration-300">
         <CardHeader>
           <CardTitle className="text-xl font-bold text-center">
             {t.advancedStats}

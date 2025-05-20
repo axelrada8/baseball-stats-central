@@ -10,6 +10,18 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { useState } from "react";
 
 interface StatsData {
   AB: number;
@@ -39,6 +51,11 @@ interface StatsFormProps {
       addStats: string;
       searchByDay: string;
       reset: string;
+      resetConfirm: string;
+      resetSuccess: string;
+      resetWarning: string;
+      confirmDelete: string;
+      cancel: string;
     };
     en: {
       stats: string;
@@ -48,12 +65,19 @@ interface StatsFormProps {
       addStats: string;
       searchByDay: string;
       reset: string;
+      resetConfirm: string;
+      resetSuccess: string;
+      resetWarning: string;
+      confirmDelete: string;
+      cancel: string;
     };
   };
   onAddStats: () => void;
   onSearchDay: () => void;
   onResetStats: () => void;
   dataModified: boolean;
+  dayStats?: StatsData;
+  isShowingDayStats: boolean;
 }
 
 export default function StatsForm({ 
@@ -65,9 +89,12 @@ export default function StatsForm({
   onAddStats,
   onSearchDay,
   onResetStats,
-  dataModified
+  dataModified,
+  dayStats,
+  isShowingDayStats
 }: StatsFormProps) {
   const t = translations[language];
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
   
   // Abbreviated stat labels for display
   const statAbbreviations: Record<string, string> = {
@@ -83,8 +110,13 @@ export default function StatsForm({
     SB: "SB"
   };
 
+  const handleDateSelect = (date: Date | undefined) => {
+    onDateChange(date);
+    setDatePickerOpen(false); // Close the date picker after selection
+  };
+
   return (
-    <Card className="mb-6 bg-white dark:bg-gray-800 shadow-md hover:shadow-lg transition-shadow duration-300">
+    <Card className="mb-6 bg-white dark:bg-gray-900 shadow-md hover:shadow-lg transition-shadow duration-300">
       <CardHeader className="pb-0">
         <CardTitle className="text-xl font-bold text-center">{t.stats}</CardTitle>
       </CardHeader>
@@ -107,7 +139,7 @@ export default function StatsForm({
                 <Label htmlFor="date" className="font-medium text-primary block">
                   {t.date}
                 </Label>
-                <Popover>
+                <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"
@@ -128,7 +160,7 @@ export default function StatsForm({
                     <Calendar
                       mode="single"
                       selected={stats.date}
-                      onSelect={onDateChange}
+                      onSelect={handleDateSelect}
                       initialFocus
                       className="p-3 pointer-events-auto"
                     />
@@ -141,7 +173,7 @@ export default function StatsForm({
               {Object.entries(stats)
                 .filter(([key]) => key !== 'date')
                 .map(([key, value]) => (
-                  <div key={key} className="stat-card bg-white dark:bg-gray-700 p-3 rounded-lg border shadow-sm">
+                  <div key={key} className="stat-card bg-white dark:bg-gray-800 p-3 rounded-lg border shadow-sm">
                     <Label htmlFor={key} className="font-medium text-primary block text-center">
                       {statAbbreviations[key]}
                     </Label>
@@ -178,7 +210,7 @@ export default function StatsForm({
                 <Label htmlFor="searchDate" className="font-medium text-primary block">
                   {t.date}
                 </Label>
-                <Popover>
+                <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"
@@ -199,7 +231,7 @@ export default function StatsForm({
                     <Calendar
                       mode="single"
                       selected={stats.date}
-                      onSelect={onDateChange}
+                      onSelect={handleDateSelect}
                       initialFocus
                       className="p-3 pointer-events-auto"
                     />
@@ -207,6 +239,25 @@ export default function StatsForm({
                 </Popover>
               </div>
             </div>
+            
+            {isShowingDayStats && dayStats && (
+              <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <h3 className="text-lg font-medium mb-3 text-center">
+                  {format(stats.date || new Date(), "PPP", { locale: language === "es" ? es : undefined })}
+                </h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+                  {Object.entries(dayStats)
+                    .filter(([key]) => key !== 'date')
+                    .map(([key, value]) => (
+                      <div key={key} className="bg-white dark:bg-gray-700 p-3 rounded-lg border shadow-sm">
+                        <p className="font-medium text-center">{statAbbreviations[key]}</p>
+                        <p className="text-xl font-bold text-center">{value}</p>
+                        <p className="text-xs text-muted-foreground text-center">{t.statLabels[key]}</p>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
             
             <div className="mt-6 flex justify-center">
               <Button 
@@ -222,15 +273,32 @@ export default function StatsForm({
         </Tabs>
 
         <div className="mt-8 border-t pt-6 flex justify-center">
-          <Button 
-            onClick={onResetStats}
-            variant="outline"
-            size="sm"
-            className="flex items-center gap-2 border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
-          >
-            <RotateCw className="w-4 h-4" />
-            {t.reset}
-          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button 
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2 border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
+              >
+                <RotateCw className="w-4 h-4" />
+                {t.reset}
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>{t.resetConfirm}</AlertDialogTitle>
+                <AlertDialogDescription>
+                  {t.resetWarning}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>{t.cancel}</AlertDialogCancel>
+                <AlertDialogAction onClick={onResetStats} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                  {t.confirmDelete}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </CardContent>
     </Card>

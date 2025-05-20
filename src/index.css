@@ -46,14 +46,14 @@
   }
 
   .dark {
-    /* BeatStars-inspired dark mode */
-    --background: 240 10% 3.9%;
+    /* Truly black dark mode */
+    --background: 0 0% 0%;
     --foreground: 0 0% 98%;
 
-    --card: 240 10% 3.9%;
+    --card: 0 0% 3%;
     --card-foreground: 0 0% 98%;
 
-    --popover: 240 10% 3.9%;
+    --popover: 0 0% 3%;
     --popover-foreground: 0 0% 98%;
 
     --primary: 252 95% 85%;
@@ -62,26 +62,26 @@
     --secondary: 0 100% 60%;
     --secondary-foreground: 210 40% 98%;
 
-    --muted: 240 3.7% 15.9%;
+    --muted: 0 0% 15%;
     --muted-foreground: 240 5% 64.9%;
 
-    --accent: 240 3.7% 15.9%;
+    --accent: 0 0% 15%;
     --accent-foreground: 0 0% 98%;
 
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
+    --border: 0 0% 20%;
+    --input: 0 0% 15%;
     --ring: 252 95% 85%;
     
-    --sidebar-background: 240 5.9% 10%;
+    --sidebar-background: 0 0% 5%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent: 0 0% 15%;
     --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-border: 0 0% 15%;
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
 }
@@ -127,10 +127,10 @@
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
 }
 
-/* BeatStars-inspired dark mode styles */
+/* True black dark mode styles */
 .dark {
   color-scheme: dark;
-  background-color: #121212;
+  background-color: #000;
 }
 
 .dark .stat-card {
@@ -141,7 +141,7 @@
 .dark input,
 .dark select,
 .dark textarea {
-  background-color: rgba(30, 30, 35, 0.9) !important;
+  background-color: rgba(15, 15, 15, 0.9) !important;
   border-color: rgba(80, 80, 110, 0.3) !important;
 }
 
@@ -150,8 +150,8 @@
 }
 
 .dark .card {
-  background: linear-gradient(135deg, rgba(35, 35, 40, 0.95), rgba(25, 25, 30, 0.97));
-  border: 1px solid rgba(90, 90, 110, 0.2);
+  background: linear-gradient(135deg, rgba(15, 15, 15, 0.95), rgba(5, 5, 5, 0.97));
+  border: 1px solid rgba(50, 50, 60, 0.2);
 }
 
 /* Calendar popper formatting */
@@ -197,4 +197,17 @@
   width: 100%;
   height: 100%;
   aspect-ratio: 1/1;
+}
+
+/* Ensure dialog content is visible */
+.dark .dialog-content,
+.dark [role="dialog"] {
+  background-color: rgb(15, 15, 15);
+  color: white;
+}
+
+/* Make sure alert dialog is properly styled in dark mode */
+.dark [role="alertdialog"] {
+  background-color: rgb(15, 15, 15);
+  color: white;
 }
