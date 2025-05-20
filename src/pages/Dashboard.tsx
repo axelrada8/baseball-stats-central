@@ -9,7 +9,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Download, Globe, CalendarDays } from "lucide-react";
 import { jsPDF } from "jspdf";
-import { format, isAfter, isBefore, isEqual } from "date-fns";
+import { format, isEqual } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { Calendar } from "@/components/ui/calendar";
@@ -33,8 +33,6 @@ interface PlayerStats {
     K: number;
     SB: number;
     date?: Date;
-    startDate?: Date;
-    endDate?: Date;
   };
 }
 
@@ -52,7 +50,7 @@ const translations = {
     position: "Posición",
     team: "Equipo",
     photo: "Foto",
-    photoRecommendation: "Tamaño recomendado: 400x400 píxeles",
+    photoRecommendation: "Tamaño mínimo recomendado: 500x500 píxeles",
     adjustPhoto: "Ajustar Foto",
     zoom: "Zoom",
     movePhoto: "Arrastra para mover la foto",
@@ -60,8 +58,6 @@ const translations = {
     cancel: "Cancelar",
     stats: "Estadísticas Ofensivas",
     date: "Fecha",
-    startDate: "Fecha inicial",
-    endDate: "Fecha final",
     selectDate: "Seleccionar fecha",
     statLabels: {
       AB: "Veces al Bate",
@@ -98,7 +94,7 @@ const translations = {
     exportSuccess: "PDF exportado correctamente",
     allGames: "Todos los juegos",
     filterByDate: "Filtrar por fecha",
-    dateRange: "Rango de fechas"
+    addStats: "Agregar Estadísticas"
   },
   en: {
     title: "⚾ Baseball Statistics",
@@ -112,7 +108,7 @@ const translations = {
     position: "Position",
     team: "Team",
     photo: "Photo",
-    photoRecommendation: "Recommended size: 400x400 pixels",
+    photoRecommendation: "Minimum recommended size: 500x500 pixels",
     adjustPhoto: "Adjust Photo",
     zoom: "Zoom",
     movePhoto: "Drag to move the photo",
@@ -120,8 +116,6 @@ const translations = {
     cancel: "Cancel",
     stats: "Offensive Statistics",
     date: "Date",
-    startDate: "Start date",
-    endDate: "End date",
     selectDate: "Select date",
     statLabels: {
       AB: "At Bats",
@@ -158,7 +152,7 @@ const translations = {
     exportSuccess: "PDF exported successfully",
     allGames: "All Games",
     filterByDate: "Filter by date",
-    dateRange: "Date range"
+    addStats: "Add Statistics"
   }
 };
 
@@ -180,8 +174,6 @@ export default function Dashboard() {
       K: 0,
       SB: 0,
       date: new Date(),
-      startDate: undefined,
-      endDate: undefined,
     },
   });
   
@@ -196,7 +188,6 @@ export default function Dashboard() {
   const [allStats, setAllStats] = useState<PlayerStats[]>([]);
   const [filterDate, setFilterDate] = useState<Date | null>(null);
   const [showAllStats, setShowAllStats] = useState(true);
-  const [dateRangeFilter, setDateRangeFilter] = useState(false);
 
   // Efecto para manejar el modo oscuro - updated to use BeatStars-like dark mode
   useEffect(() => {
@@ -276,22 +267,6 @@ export default function Dashboard() {
     });
     setDataModified(true);
   };
-  
-  const handleStartDateChange = (date: Date | undefined) => {
-    setPlayer({
-      ...player,
-      stats: { ...player.stats, startDate: date }
-    });
-    setDataModified(true);
-  };
-  
-  const handleEndDateChange = (date: Date | undefined) => {
-    setPlayer({
-      ...player,
-      stats: { ...player.stats, endDate: date }
-    });
-    setDataModified(true);
-  };
 
   const saveStats = () => {
     // Create a new entry with current date
@@ -325,40 +300,12 @@ export default function Dashboard() {
     setShowAllStats(showAll);
     if (showAll) {
       setFilterDate(null);
-      setDateRangeFilter(false);
     }
   };
   
   const filterStatsByDate = () => {
     if (showAllStats) {
       return allStats;
-    }
-    
-    if (dateRangeFilter) {
-      // Filter by date range
-      if (!player.stats.startDate && !player.stats.endDate) {
-        return allStats;
-      }
-      
-      return allStats.filter(stat => {
-        if (!stat.stats.date) return false;
-        const statDate = new Date(stat.stats.date);
-        
-        let isAfterStart = true;
-        let isBeforeEnd = true;
-        
-        if (player.stats.startDate) {
-          isAfterStart = isAfter(statDate, new Date(player.stats.startDate)) || 
-                         isEqual(statDate, new Date(player.stats.startDate));
-        }
-        
-        if (player.stats.endDate) {
-          isBeforeEnd = isBefore(statDate, new Date(player.stats.endDate)) || 
-                        isEqual(statDate, new Date(player.stats.endDate));
-        }
-        
-        return isAfterStart && isBeforeEnd;
-      });
     }
     
     // Filter by specific date
@@ -373,13 +320,13 @@ export default function Dashboard() {
     });
   };
   
-  const currentStats = useMemo(() => filterStatsByDate(), [allStats, showAllStats, filterDate, dateRangeFilter, player.stats.startDate, player.stats.endDate]);
+  const currentStats = useMemo(() => filterStatsByDate(), [allStats, showAllStats, filterDate]);
   
   const calculateAggregateStats = () => {
     if (currentStats.length === 0) {
       const numericStats: Record<string, number> = {};
       Object.entries(player.stats).forEach(([key, value]) => {
-        if (key !== 'date' && key !== 'startDate' && key !== 'endDate' && typeof value === 'number') {
+        if (key !== 'date' && typeof value === 'number') {
           numericStats[key] = value;
         }
       });
@@ -390,7 +337,7 @@ export default function Dashboard() {
     const aggregated: Record<string, number> = {};
     currentStats.forEach(stat => {
       Object.entries(stat.stats).forEach(([key, value]) => {
-        if (key !== 'date' && key !== 'startDate' && key !== 'endDate' && typeof value === 'number') {
+        if (key !== 'date' && typeof value === 'number') {
           aggregated[key] = (aggregated[key] || 0) + value;
         }
       });
@@ -614,28 +561,16 @@ export default function Dashboard() {
         </Button>
         
         <Button 
-          variant={!showAllStats && !dateRangeFilter ? "default" : "outline"}
+          variant={!showAllStats ? "default" : "outline"}
           size="sm"
           onClick={() => {
             setShowAllStats(false);
-            setDateRangeFilter(false);
           }}
         >
           {t.filterByDate}
         </Button>
         
-        <Button 
-          variant={dateRangeFilter ? "default" : "outline"}
-          size="sm"
-          onClick={() => {
-            setShowAllStats(false);
-            setDateRangeFilter(true);
-          }}
-        >
-          {t.dateRange}
-        </Button>
-        
-        {!showAllStats && !dateRangeFilter && (
+        {!showAllStats && (
           <Popover>
             <PopoverTrigger asChild>
               <Button
@@ -671,10 +606,10 @@ export default function Dashboard() {
         stats={player.stats} 
         onStatsChange={handleStatsChange} 
         onDateChange={handleDateChange}
-        onStartDateChange={handleStartDateChange}
-        onEndDateChange={handleEndDateChange}
         language={language} 
-        translations={translations} 
+        translations={translations}
+        onAddStats={saveStats}
+        dataModified={dataModified}
       />
 
       <Card className="bg-white dark:bg-gray-800 shadow-md hover:shadow-lg transition-shadow duration-300">
@@ -705,21 +640,7 @@ export default function Dashboard() {
         </CardContent>
       </Card>
 
-      <div className="mt-8 flex flex-col sm:flex-row justify-center gap-4">
-        <Button 
-          size="lg" 
-          onClick={saveStats} 
-          className="px-8"
-          disabled={!dataModified}
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
-            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
-            <polyline points="17 21 17 13 7 13 7 21" />
-            <polyline points="7 3 7 8 15 8" />
-          </svg>
-          {t.saveStats}
-        </Button>
-        
+      <div className="mt-8 flex justify-center gap-4">
         <Button variant="secondary" size="lg" onClick={exportToPDF} className="px-8">
           <Download className="mr-2" />
           {t.exportPDF}

@@ -64,6 +64,17 @@ export default function PlayerCard({ player, onPlayerChange, language, translati
     const file = e.target.files?.[0];
     if (file) {
       const url = URL.createObjectURL(file);
+      
+      // Create an image element to check dimensions
+      const img = new Image();
+      img.onload = function() {
+        if (img.width < 500 || img.height < 500) {
+          alert(`${t.photoRecommendation} (500x500)`);
+        }
+        URL.revokeObjectURL(img.src);
+      };
+      img.src = url;
+      
       setTempPhoto(url);
       setPosition({ x: 0, y: 0 });
       setZoom(100);
@@ -225,7 +236,7 @@ export default function PlayerCard({ player, onPlayerChange, language, translati
           </div>
           
           <p className="text-xs text-muted-foreground mt-1 text-center">
-            {t.photoRecommendation}
+            {t.photoRecommendation} (500x500)
           </p>
           
           {isAdjusting && (
