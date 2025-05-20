@@ -6,13 +6,10 @@ import { useToast } from "@/components/ui/use-toast";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Download, Globe, CalendarDays } from "lucide-react";
+import { Download, Globe } from "lucide-react";
 import { jsPDF } from "jspdf";
 import { format, isEqual } from "date-fns";
 import { es } from "date-fns/locale";
-import { cn } from "@/lib/utils";
-import { Calendar } from "@/components/ui/calendar";
 import PlayerCard from "@/components/PlayerCard";
 import StatsForm from "@/components/StatsForm";
 
@@ -94,7 +91,12 @@ const translations = {
     exportSuccess: "PDF exportado correctamente",
     allGames: "Todos los juegos",
     filterByDate: "Filtrar por fecha",
-    addStats: "Agregar Estadísticas"
+    addStats: "Agregar Datos",
+    searchByDay: "Datos del Día",
+    reset: "Reiniciar Datos",
+    resetConfirm: "¿Estás seguro?",
+    resetSuccess: "Datos reiniciados correctamente",
+    noDataForDate: "No hay datos para esta fecha"
   },
   en: {
     title: "⚾ Baseball Statistics",
@@ -152,7 +154,12 @@ const translations = {
     exportSuccess: "PDF exported successfully",
     allGames: "All Games",
     filterByDate: "Filter by date",
-    addStats: "Add Statistics"
+    addStats: "Add Stats",
+    searchByDay: "Day Stats",
+    reset: "Reset Data",
+    resetConfirm: "Are you sure?",
+    resetSuccess: "Data reset successfully",
+    noDataForDate: "No data for this date"
   }
 };
 
@@ -186,8 +193,8 @@ export default function Dashboard() {
   
   // Track all stats records
   const [allStats, setAllStats] = useState<PlayerStats[]>([]);
-  const [filterDate, setFilterDate] = useState<Date | null>(null);
-  const [showAllStats, setShowAllStats] = useState(true);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [showDayStats, setShowDayStats] = useState(false);
 
   // Efecto para manejar el modo oscuro - updated to use BeatStars-like dark mode
   useEffect(() => {
@@ -266,19 +273,28 @@ export default function Dashboard() {
       stats: { ...player.stats, date: date }
     });
     setDataModified(true);
+    
+    // Also update the selected date for filtering
+    if (date) {
+      setSelectedDate(date);
+    }
   };
 
-  const saveStats = () => {
+  const addStats = () => {
+    if (!player.stats.date) {
+      player.stats.date = new Date();
+    }
+    
     // Create a new entry with current date
     const newEntry = { ...player };
-    
-    // Save current player state
-    localStorage.setItem("playerStats", JSON.stringify(player));
     
     // Update history
     const updatedStats = [...allStats, newEntry];
     setAllStats(updatedStats);
     localStorage.setItem("playerStatsHistory", JSON.stringify(updatedStats));
+    
+    // Save current player state
+    localStorage.setItem("playerStats", JSON.stringify(player));
     
     toast({
       title: t.statsSaved,
@@ -287,6 +303,99 @@ export default function Dashboard() {
     
     // Reset the modified flag
     setDataModified(false);
+    
+    // Reset stats to zero after adding
+    setPlayer({
+      ...player,
+      stats: {
+        AB: 0,
+        H: 0,
+        doubles: 0,
+        triples: 0,
+        HR: 0,
+        RBI: 0,
+        R: 0,
+        BB: 0,
+        K: 0,
+        SB: 0,
+        date: new Date()
+      }
+    });
+  };
+
+  const searchDayStats = () => {
+    if (!player.stats.date) {
+      return;
+    }
+
+    setSelectedDate(player.stats.date);
+    setShowDayStats(true);
+    
+    // Check if there are any stats for this date
+    const hasDataForDate = allStats.some(stat => {
+      if (!stat.stats.date) return false;
+      const statDate = new Date(stat.stats.date);
+      return statDate.toDateString() === player.stats.date?.toDateString();
+    });
+    
+    if (!hasDataForDate) {
+      toast({
+        title: t.noDataForDate,
+        description: format(player.stats.date, "PPP", { locale: language === "es" ? es : undefined }),
+      });
+    }
+  };
+
+  const resetStats = () => {
+    if (confirm(t.resetConfirm)) {
+      // Clear all stats
+      setAllStats([]);
+      localStorage.removeItem("playerStatsHistory");
+      
+      // Reset current stats
+      setPlayer({
+        ...player,
+        stats: {
+          AB: 0,
+          H: 0,
+          doubles: 0,
+          triples: 0,
+          HR: 0,
+          RBI: 0,
+          R: 0,
+          BB: 0,
+          K: 0,
+          SB: 0,
+          date: new Date()
+        }
+      });
+      
+      localStorage.setItem("playerStats", JSON.stringify({
+        ...player,
+        stats: {
+          AB: 0,
+          H: 0,
+          doubles: 0,
+          triples: 0,
+          HR: 0,
+          RBI: 0,
+          R: 0,
+          BB: 0,
+          K: 0,
+          SB: 0,
+          date: new Date()
+        }
+      }));
+      
+      // Reset UI state
+      setShowDayStats(false);
+      setSelectedDate(null);
+      setDataModified(false);
+      
+      toast({
+        title: t.resetSuccess,
+      });
+    }
   };
 
   const handleLanguageChange = (value: string) => {
@@ -296,41 +405,36 @@ export default function Dashboard() {
     }
   };
   
-  const toggleFilter = (showAll: boolean) => {
-    setShowAllStats(showAll);
-    if (showAll) {
-      setFilterDate(null);
-    }
-  };
-  
   const filterStatsByDate = () => {
-    if (showAllStats) {
+    if (!showDayStats || !selectedDate) {
       return allStats;
     }
     
     // Filter by specific date
-    if (!filterDate) {
-      return allStats;
-    }
-    
     return allStats.filter(stat => {
       if (!stat.stats.date) return false;
       const statDate = new Date(stat.stats.date);
-      return statDate.toDateString() === filterDate.toDateString();
+      return statDate.toDateString() === selectedDate.toDateString();
     });
   };
   
-  const currentStats = useMemo(() => filterStatsByDate(), [allStats, showAllStats, filterDate]);
+  const currentStats = useMemo(() => filterStatsByDate(), [allStats, showDayStats, selectedDate]);
   
   const calculateAggregateStats = () => {
     if (currentStats.length === 0) {
-      const numericStats: Record<string, number> = {};
-      Object.entries(player.stats).forEach(([key, value]) => {
-        if (key !== 'date' && typeof value === 'number') {
-          numericStats[key] = value;
-        }
-      });
-      return numericStats;
+      // Return empty stats if there are no entries
+      return {
+        AB: 0,
+        H: 0,
+        doubles: 0,
+        triples: 0,
+        HR: 0,
+        RBI: 0,
+        R: 0,
+        BB: 0,
+        K: 0,
+        SB: 0
+      };
     }
     
     // Combine all filtered stats
@@ -346,7 +450,7 @@ export default function Dashboard() {
     return aggregated;
   };
   
-  const aggregateStats = useMemo(() => calculateAggregateStats(), [currentStats, player.stats]);
+  const aggregateStats = useMemo(() => calculateAggregateStats(), [currentStats]);
 
   const exportToPDF = () => {
     const doc = new jsPDF();
@@ -551,70 +655,28 @@ export default function Dashboard() {
 
       <PlayerCard player={player} onPlayerChange={handlePlayerChange} language={language} translations={translations} />
       
-      <div className="mb-4 flex gap-2 items-center justify-end flex-wrap">
-        <Button 
-          variant={showAllStats ? "default" : "outline"} 
-          size="sm"
-          onClick={() => toggleFilter(true)}
-        >
-          {t.allGames}
-        </Button>
-        
-        <Button 
-          variant={!showAllStats ? "default" : "outline"}
-          size="sm"
-          onClick={() => {
-            setShowAllStats(false);
-          }}
-        >
-          {t.filterByDate}
-        </Button>
-        
-        {!showAllStats && (
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className={cn(
-                  "w-[180px] justify-start text-left",
-                  !filterDate && "text-muted-foreground"
-                )}
-              >
-                <CalendarDays className="mr-2 h-4 w-4" />
-                {filterDate ? (
-                  format(filterDate, "PPP", { locale: language === "es" ? es : undefined })
-                ) : (
-                  <span>{t.selectDate}</span>
-                )}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar
-                mode="single"
-                selected={filterDate || undefined}
-                onSelect={(date) => setFilterDate(date)}
-                initialFocus
-                className="p-3 pointer-events-auto"
-              />
-            </PopoverContent>
-          </Popover>
-        )}
-      </div>
-      
       <StatsForm 
         stats={player.stats} 
         onStatsChange={handleStatsChange} 
         onDateChange={handleDateChange}
         language={language} 
         translations={translations}
-        onAddStats={saveStats}
+        onAddStats={addStats}
+        onSearchDay={searchDayStats}
+        onResetStats={resetStats}
         dataModified={dataModified}
       />
 
       <Card className="bg-white dark:bg-gray-800 shadow-md hover:shadow-lg transition-shadow duration-300">
         <CardHeader>
-          <CardTitle className="text-xl font-bold text-center">{t.advancedStats}</CardTitle>
+          <CardTitle className="text-xl font-bold text-center">
+            {t.advancedStats}
+            {showDayStats && selectedDate && (
+              <span className="block text-sm font-normal text-muted-foreground mt-1">
+                {format(selectedDate, "PPP", { locale: language === "es" ? es : undefined })}
+              </span>
+            )}
+          </CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-6 p-6">
           <div className="stat-card bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900 dark:to-blue-800 p-4 rounded-lg border shadow-sm text-center">
