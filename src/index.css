@@ -211,3 +211,15 @@
   background-color: rgb(15, 15, 15);
   color: white;
 }
+
+/* Calendar auto close support */
+.calendar-selected {
+  pointer-events: auto;
+}
+
+/* Ensure tab content is fully visible */
+.tab-content {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}

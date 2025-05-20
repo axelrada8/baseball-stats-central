@@ -344,9 +344,25 @@ export default function Dashboard() {
     });
     
     if (statsForDay.length > 0) {
-      // Calculate aggregate stats for this day
-      const daySummary = calculateAggregateStatsForEntries(statsForDay);
-      setDayStats(daySummary);
+      // Calculate aggregate stats for this day - Fix the TypeScript error here
+      const aggregatedStats = calculateAggregateStatsForEntries(statsForDay);
+      
+      // Create a properly typed stats object
+      const typedDayStats: PlayerStats["stats"] = {
+        AB: aggregatedStats.AB || 0,
+        H: aggregatedStats.H || 0,
+        doubles: aggregatedStats.doubles || 0,
+        triples: aggregatedStats.triples || 0,
+        HR: aggregatedStats.HR || 0,
+        RBI: aggregatedStats.RBI || 0,
+        R: aggregatedStats.R || 0,
+        BB: aggregatedStats.BB || 0,
+        K: aggregatedStats.K || 0,
+        SB: aggregatedStats.SB || 0,
+        date: player.stats.date
+      };
+      
+      setDayStats(typedDayStats);
     } else {
       setDayStats(null);
       toast({
@@ -427,7 +443,10 @@ export default function Dashboard() {
     });
   };
   
-  const currentStats = useMemo(() => filterStatsByDate(), [allStats, showDayStats, selectedDate]);
+  // This useMemo determines which stats to display based on whether we're showing all stats or just day stats
+  const currentStats = useMemo(() => {
+    return showDayStats ? filterStatsByDate() : allStats;
+  }, [allStats, showDayStats, selectedDate]);
   
   // Helper function to calculate aggregate stats for a set of entries
   const calculateAggregateStatsForEntries = (entries: PlayerStats[]) => {
