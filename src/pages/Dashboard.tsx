@@ -1,15 +1,18 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Download, Globe, CalendarDays } from "lucide-react";
 import { jsPDF } from "jspdf";
-import { format } from "date-fns";
+import { format, isAfter, isBefore, isEqual } from "date-fns";
 import { es } from "date-fns/locale";
+import { cn } from "@/lib/utils";
+import { Calendar } from "@/components/ui/calendar";
 import PlayerCard from "@/components/PlayerCard";
 import StatsForm from "@/components/StatsForm";
 
@@ -30,6 +33,8 @@ interface PlayerStats {
     K: number;
     SB: number;
     date?: Date;
+    startDate?: Date;
+    endDate?: Date;
   };
 }
 
@@ -50,10 +55,13 @@ const translations = {
     photoRecommendation: "Tamaño recomendado: 400x400 píxeles",
     adjustPhoto: "Ajustar Foto",
     zoom: "Zoom",
+    movePhoto: "Arrastra para mover la foto",
     apply: "Aplicar",
     cancel: "Cancelar",
     stats: "Estadísticas Ofensivas",
     date: "Fecha",
+    startDate: "Fecha inicial",
+    endDate: "Fecha final",
     selectDate: "Seleccionar fecha",
     statLabels: {
       AB: "Veces al Bate",
@@ -89,7 +97,8 @@ const translations = {
     statsSuccessfullySaved: "Tus estadísticas han sido guardadas correctamente.",
     exportSuccess: "PDF exportado correctamente",
     allGames: "Todos los juegos",
-    filterByDate: "Filtrar por fecha"
+    filterByDate: "Filtrar por fecha",
+    dateRange: "Rango de fechas"
   },
   en: {
     title: "⚾ Baseball Statistics",
@@ -106,10 +115,13 @@ const translations = {
     photoRecommendation: "Recommended size: 400x400 pixels",
     adjustPhoto: "Adjust Photo",
     zoom: "Zoom",
+    movePhoto: "Drag to move the photo",
     apply: "Apply",
     cancel: "Cancel",
     stats: "Offensive Statistics",
     date: "Date",
+    startDate: "Start date",
+    endDate: "End date",
     selectDate: "Select date",
     statLabels: {
       AB: "At Bats",
@@ -145,7 +157,8 @@ const translations = {
     statsSuccessfullySaved: "Your statistics have been saved successfully.",
     exportSuccess: "PDF exported successfully",
     allGames: "All Games",
-    filterByDate: "Filter by date"
+    filterByDate: "Filter by date",
+    dateRange: "Date range"
   }
 };
 
@@ -167,6 +180,8 @@ export default function Dashboard() {
       K: 0,
       SB: 0,
       date: new Date(),
+      startDate: undefined,
+      endDate: undefined,
     },
   });
   
@@ -175,11 +190,13 @@ export default function Dashboard() {
   const [darkMode, setDarkMode] = useState<boolean>(false);
   const [language, setLanguage] = useState<"es" | "en">("es");
   const t = translations[language];
+  const [dataModified, setDataModified] = useState(false);
   
   // Track all stats records
   const [allStats, setAllStats] = useState<PlayerStats[]>([]);
   const [filterDate, setFilterDate] = useState<Date | null>(null);
   const [showAllStats, setShowAllStats] = useState(true);
+  const [dateRangeFilter, setDateRangeFilter] = useState(false);
 
   // Efecto para manejar el modo oscuro - updated to use BeatStars-like dark mode
   useEffect(() => {
@@ -233,10 +250,13 @@ export default function Dashboard() {
     const { name, value, files } = e.target;
     if (name === "photo" && files && files.length > 0) {
       setPlayer({ ...player, photo: URL.createObjectURL(files[0]) });
+      setDataModified(true);
     } else if (name === "photo" && value) { // For our custom photo handler
       setPlayer({ ...player, photo: value });
+      setDataModified(true);
     } else {
       setPlayer({ ...player, [name]: value });
+      setDataModified(true);
     }
   };
 
@@ -246,6 +266,7 @@ export default function Dashboard() {
       ...player,
       stats: { ...player.stats, [name]: parseInt(value) || 0 },
     });
+    setDataModified(true);
   };
 
   const handleDateChange = (date: Date | undefined) => {
@@ -253,6 +274,23 @@ export default function Dashboard() {
       ...player,
       stats: { ...player.stats, date: date }
     });
+    setDataModified(true);
+  };
+  
+  const handleStartDateChange = (date: Date | undefined) => {
+    setPlayer({
+      ...player,
+      stats: { ...player.stats, startDate: date }
+    });
+    setDataModified(true);
+  };
+  
+  const handleEndDateChange = (date: Date | undefined) => {
+    setPlayer({
+      ...player,
+      stats: { ...player.stats, endDate: date }
+    });
+    setDataModified(true);
   };
 
   const saveStats = () => {
@@ -271,6 +309,9 @@ export default function Dashboard() {
       title: t.statsSaved,
       description: t.statsSuccessfullySaved,
     });
+    
+    // Reset the modified flag
+    setDataModified(false);
   };
 
   const handleLanguageChange = (value: string) => {
@@ -284,11 +325,44 @@ export default function Dashboard() {
     setShowAllStats(showAll);
     if (showAll) {
       setFilterDate(null);
+      setDateRangeFilter(false);
     }
   };
   
   const filterStatsByDate = () => {
-    if (showAllStats || !filterDate) {
+    if (showAllStats) {
+      return allStats;
+    }
+    
+    if (dateRangeFilter) {
+      // Filter by date range
+      if (!player.stats.startDate && !player.stats.endDate) {
+        return allStats;
+      }
+      
+      return allStats.filter(stat => {
+        if (!stat.stats.date) return false;
+        const statDate = new Date(stat.stats.date);
+        
+        let isAfterStart = true;
+        let isBeforeEnd = true;
+        
+        if (player.stats.startDate) {
+          isAfterStart = isAfter(statDate, new Date(player.stats.startDate)) || 
+                         isEqual(statDate, new Date(player.stats.startDate));
+        }
+        
+        if (player.stats.endDate) {
+          isBeforeEnd = isBefore(statDate, new Date(player.stats.endDate)) || 
+                        isEqual(statDate, new Date(player.stats.endDate));
+        }
+        
+        return isAfterStart && isBeforeEnd;
+      });
+    }
+    
+    // Filter by specific date
+    if (!filterDate) {
       return allStats;
     }
     
@@ -299,25 +373,33 @@ export default function Dashboard() {
     });
   };
   
-  const currentStats = filterStatsByDate();
+  const currentStats = useMemo(() => filterStatsByDate(), [allStats, showAllStats, filterDate, dateRangeFilter, player.stats.startDate, player.stats.endDate]);
   
   const calculateAggregateStats = () => {
     if (currentStats.length === 0) {
-      return player.stats;
+      const numericStats: Record<string, number> = {};
+      Object.entries(player.stats).forEach(([key, value]) => {
+        if (key !== 'date' && key !== 'startDate' && key !== 'endDate' && typeof value === 'number') {
+          numericStats[key] = value;
+        }
+      });
+      return numericStats;
     }
     
     // Combine all filtered stats
-    return currentStats.reduce((acc, curr) => {
-      Object.entries(curr.stats).forEach(([key, value]) => {
-        if (key !== 'date' && typeof value === 'number') {
-          acc[key] = (acc[key] || 0) + value;
+    const aggregated: Record<string, number> = {};
+    currentStats.forEach(stat => {
+      Object.entries(stat.stats).forEach(([key, value]) => {
+        if (key !== 'date' && key !== 'startDate' && key !== 'endDate' && typeof value === 'number') {
+          aggregated[key] = (aggregated[key] || 0) + value;
         }
       });
-      return acc;
-    }, {} as Record<string, number>);
+    });
+    
+    return aggregated;
   };
   
-  const aggregateStats = calculateAggregateStats();
+  const aggregateStats = useMemo(() => calculateAggregateStats(), [currentStats, player.stats]);
 
   const exportToPDF = () => {
     const doc = new jsPDF();
@@ -457,7 +539,7 @@ export default function Dashboard() {
     
     toast({
       title: t.exportSuccess,
-      description: `${player.name || "Player"}_stats.pdf`,
+      description: `${player.name || "player"}_stats.pdf`,
     });
   };
 
@@ -522,7 +604,7 @@ export default function Dashboard() {
 
       <PlayerCard player={player} onPlayerChange={handlePlayerChange} language={language} translations={translations} />
       
-      <div className="mb-4 flex gap-2 items-center justify-end">
+      <div className="mb-4 flex gap-2 items-center justify-end flex-wrap">
         <Button 
           variant={showAllStats ? "default" : "outline"} 
           size="sm"
@@ -532,14 +614,28 @@ export default function Dashboard() {
         </Button>
         
         <Button 
-          variant={!showAllStats ? "default" : "outline"}
+          variant={!showAllStats && !dateRangeFilter ? "default" : "outline"}
           size="sm"
-          onClick={() => toggleFilter(false)}
+          onClick={() => {
+            setShowAllStats(false);
+            setDateRangeFilter(false);
+          }}
         >
           {t.filterByDate}
         </Button>
         
-        {!showAllStats && (
+        <Button 
+          variant={dateRangeFilter ? "default" : "outline"}
+          size="sm"
+          onClick={() => {
+            setShowAllStats(false);
+            setDateRangeFilter(true);
+          }}
+        >
+          {t.dateRange}
+        </Button>
+        
+        {!showAllStats && !dateRangeFilter && (
           <Popover>
             <PopoverTrigger asChild>
               <Button
@@ -575,6 +671,8 @@ export default function Dashboard() {
         stats={player.stats} 
         onStatsChange={handleStatsChange} 
         onDateChange={handleDateChange}
+        onStartDateChange={handleStartDateChange}
+        onEndDateChange={handleEndDateChange}
         language={language} 
         translations={translations} 
       />
@@ -608,7 +706,12 @@ export default function Dashboard() {
       </Card>
 
       <div className="mt-8 flex flex-col sm:flex-row justify-center gap-4">
-        <Button size="lg" onClick={saveStats} className="px-8">
+        <Button 
+          size="lg" 
+          onClick={saveStats} 
+          className="px-8"
+          disabled={!dataModified}
+        >
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
             <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
             <polyline points="17 21 17 13 7 13 7 21" />

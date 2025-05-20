@@ -175,3 +175,18 @@
   background-color: hsl(var(--primary));
   color: hsl(var(--primary-foreground));
 }
+
+/* Photo adjustment styles */
+.photo-container {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  height: 100%;
+  cursor: move;
+}
+
+.photo-draggable {
+  cursor: move;
+  transition: none;
+  user-select: none;
+}
