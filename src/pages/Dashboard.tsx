@@ -6,12 +6,14 @@ import { useToast } from "@/components/ui/use-toast";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { Download, Globe } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Download, Globe, Baseball } from "lucide-react";
 import { jsPDF } from "jspdf";
 import { format, isEqual } from "date-fns";
 import { es } from "date-fns/locale";
 import PlayerCard from "@/components/PlayerCard";
 import StatsForm from "@/components/StatsForm";
+import PitchingStatsForm from "@/components/PitchingStatsForm";
 
 interface PlayerStats {
   name: string;
@@ -31,6 +33,22 @@ interface PlayerStats {
     SB: number;
     date?: Date;
   };
+}
+
+interface PitchingStats {
+  IP: number;
+  H: number;
+  R: number;
+  ER: number;
+  BB: number;
+  K: number;
+  HBP: number;
+  WP: number;
+  BK: number;
+  W: number;
+  L: number;
+  SV: number;
+  date?: Date;
 }
 
 // Traducciones
@@ -68,6 +86,20 @@ const translations = {
       K: "Ponches",
       SB: "Bases Robadas"
     },
+    pitchingStatLabels: {
+      IP: "Entradas Lanzadas",
+      H: "Hits Permitidos",
+      R: "Carreras Permitidas",
+      ER: "Carreras Limpias",
+      BB: "Bases por Bola",
+      K: "Ponches",
+      HBP: "Golpeados",
+      WP: "Wild Pitches",
+      BK: "Balks",
+      W: "Victorias",
+      L: "Derrotas",
+      SV: "Salvados"
+    },
     advancedStats: "Estadísticas Avanzadas",
     avg: {
       title: "AVG",
@@ -85,6 +117,22 @@ const translations = {
       title: "OPS",
       description: "On-base Plus Slugging"
     },
+    era: {
+      title: "ERA",
+      description: "Promedio de Carreras Limpias"
+    },
+    whip: {
+      title: "WHIP",
+      description: "Walks + Hits por Entradas Lanzadas"
+    },
+    kbb: {
+      title: "K/BB",
+      description: "Ratio de Ponches a Bases por Bola"
+    },
+    k9: {
+      title: "K/9",
+      description: "Ponches por 9 Entradas"
+    },
     exportPDF: "Exportar a PDF",
     statsSaved: "Estadísticas guardadas",
     statsSuccessfullySaved: "Tus estadísticas han sido guardadas correctamente.",
@@ -98,7 +146,13 @@ const translations = {
     resetSuccess: "Datos reiniciados correctamente",
     noDataForDate: "No hay datos para esta fecha",
     resetWarning: "Se perderán todos los datos guardados anteriormente. ¿Estás seguro de que quieres continuar?",
-    confirmDelete: "Sí, borrar todo"
+    confirmDelete: "Sí, borrar todo",
+    selectPosition: "Seleccionar posición...",
+    searchPosition: "Buscar posición...",
+    noPositionFound: "No se encontró ninguna posición.",
+    battingTab: "Bateo",
+    pitchingTab: "Pitcheo",
+    pitchingStats: "Estadísticas de Pitcheo"
   },
   en: {
     title: "⚾ Baseball Statistics",
@@ -133,6 +187,20 @@ const translations = {
       K: "Strikeouts",
       SB: "Stolen Bases"
     },
+    pitchingStatLabels: {
+      IP: "Innings Pitched",
+      H: "Hits Allowed",
+      R: "Runs Allowed",
+      ER: "Earned Runs",
+      BB: "Walks",
+      K: "Strikeouts",
+      HBP: "Hit By Pitch",
+      WP: "Wild Pitches",
+      BK: "Balks",
+      W: "Wins",
+      L: "Losses",
+      SV: "Saves"
+    },
     advancedStats: "Advanced Statistics",
     avg: {
       title: "AVG",
@@ -150,6 +218,22 @@ const translations = {
       title: "OPS",
       description: "On-base Plus Slugging"
     },
+    era: {
+      title: "ERA",
+      description: "Earned Run Average"
+    },
+    whip: {
+      title: "WHIP",
+      description: "Walks + Hits per Inning Pitched"
+    },
+    kbb: {
+      title: "K/BB",
+      description: "Strikeout to Walk Ratio"
+    },
+    k9: {
+      title: "K/9",
+      description: "Strikeouts per 9 Innings"
+    },
     exportPDF: "Export to PDF",
     statsSaved: "Statistics saved",
     statsSuccessfullySaved: "Your statistics have been saved successfully.",
@@ -163,7 +247,13 @@ const translations = {
     resetSuccess: "Data reset successfully",
     noDataForDate: "No data for this date",
     resetWarning: "All previously saved data will be lost. Are you sure you want to continue?",
-    confirmDelete: "Yes, delete all"
+    confirmDelete: "Yes, delete all",
+    selectPosition: "Select position...",
+    searchPosition: "Search position...",
+    noPositionFound: "No position found.",
+    battingTab: "Batting",
+    pitchingTab: "Pitching",
+    pitchingStats: "Pitching Statistics"
   }
 };
 
@@ -188,18 +278,38 @@ export default function Dashboard() {
     },
   });
   
+  const [pitching, setPitching] = useState<PitchingStats>({
+    IP: 0,
+    H: 0,
+    R: 0,
+    ER: 0,
+    BB: 0,
+    K: 0,
+    HBP: 0,
+    WP: 0,
+    BK: 0,
+    W: 0,
+    L: 0,
+    SV: 0,
+    date: new Date(),
+  });
+  
   const { toast } = useToast();
   const [user, setUser] = useState<{ name?: string; email: string } | null>(null);
   const [darkMode, setDarkMode] = useState<boolean>(false);
   const [language, setLanguage] = useState<"es" | "en">("es");
   const t = translations[language];
   const [dataModified, setDataModified] = useState(false);
+  const [pitchingDataModified, setPitchingDataModified] = useState(false);
   
   // Track all stats records
   const [allStats, setAllStats] = useState<PlayerStats[]>([]);
+  const [allPitchingStats, setAllPitchingStats] = useState<(PitchingStats & {name: string; team: string; position: string})[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [showDayStats, setShowDayStats] = useState(false);
   const [dayStats, setDayStats] = useState<PlayerStats["stats"] | null>(null);
+  const [dayPitchingStats, setDayPitchingStats] = useState<PitchingStats | null>(null);
+  const [activeTab, setActiveTab] = useState<"batting" | "pitching">("batting");
 
   // Efecto para manejar el modo oscuro - updated to use true black dark mode
   useEffect(() => {
@@ -237,10 +347,22 @@ export default function Dashboard() {
       setPlayer(JSON.parse(storedPlayer));
     }
     
+    // Cargar datos de pitcheo del localStorage
+    const storedPitching = localStorage.getItem("pitchingStats");
+    if (storedPitching) {
+      setPitching(JSON.parse(storedPitching));
+    }
+    
     // Cargar historial de estadísticas
     const storedStats = localStorage.getItem("playerStatsHistory");
     if (storedStats) {
       setAllStats(JSON.parse(storedStats));
+    }
+    
+    // Cargar historial de estadísticas de pitcheo
+    const storedPitchingStats = localStorage.getItem("pitchingStatsHistory");
+    if (storedPitchingStats) {
+      setAllPitchingStats(JSON.parse(storedPitchingStats));
     }
   }, []);
 
@@ -263,6 +385,11 @@ export default function Dashboard() {
     }
   };
 
+  const handlePositionSelect = (position: string) => {
+    setPlayer({ ...player, position });
+    setDataModified(true);
+  };
+
   const handleStatsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setPlayer({
@@ -272,12 +399,28 @@ export default function Dashboard() {
     setDataModified(true);
   };
 
-  const handleDateChange = (date: Date | undefined) => {
-    setPlayer({
-      ...player,
-      stats: { ...player.stats, date: date }
+  const handlePitchingStatsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    const numValue = name === "IP" ? parseFloat(value) || 0 : parseInt(value) || 0;
+    setPitching({
+      ...pitching,
+      [name]: numValue,
     });
-    setDataModified(true);
+    setPitchingDataModified(true);
+  };
+
+  const handleDateChange = (date: Date | undefined) => {
+    if (activeTab === "batting") {
+      setPlayer({
+        ...player,
+        stats: { ...player.stats, date: date }
+      });
+    } else {
+      setPitching({
+        ...pitching,
+        date: date
+      });
+    }
     
     // Also update the selected date for filtering
     if (date) {
@@ -286,137 +429,255 @@ export default function Dashboard() {
   };
 
   const addStats = () => {
-    if (!player.stats.date) {
-      player.stats.date = new Date();
-    }
-    
-    // Create a new entry with current date
-    const newEntry = { ...player };
-    
-    // Update history
-    const updatedStats = [...allStats, newEntry];
-    setAllStats(updatedStats);
-    localStorage.setItem("playerStatsHistory", JSON.stringify(updatedStats));
-    
-    // Save current player state
-    localStorage.setItem("playerStats", JSON.stringify(player));
-    
-    toast({
-      title: t.statsSaved,
-      description: t.statsSuccessfullySaved,
-    });
-    
-    // Reset the modified flag
-    setDataModified(false);
-    
-    // Reset stats to zero after adding
-    setPlayer({
-      ...player,
-      stats: {
-        AB: 0,
-        H: 0,
-        doubles: 0,
-        triples: 0,
-        HR: 0,
-        RBI: 0,
-        R: 0,
-        BB: 0,
-        K: 0,
-        SB: 0,
-        date: new Date()
+    if (activeTab === "batting") {
+      if (!player.stats.date) {
+        player.stats.date = new Date();
       }
-    });
-  };
-
-  const searchDayStats = () => {
-    if (!player.stats.date) {
-      return;
-    }
-
-    setSelectedDate(player.stats.date);
-    setShowDayStats(true);
-    
-    // Find stats for this specific date
-    const statsForDay = allStats.filter(stat => {
-      if (!stat.stats.date) return false;
-      const statDate = new Date(stat.stats.date);
-      return statDate.toDateString() === player.stats.date?.toDateString();
-    });
-    
-    if (statsForDay.length > 0) {
-      // Calculate aggregate stats for this day - Fix the TypeScript error here
-      const aggregatedStats = calculateAggregateStatsForEntries(statsForDay);
       
-      // Create a properly typed stats object
-      const typedDayStats: PlayerStats["stats"] = {
-        AB: aggregatedStats.AB || 0,
-        H: aggregatedStats.H || 0,
-        doubles: aggregatedStats.doubles || 0,
-        triples: aggregatedStats.triples || 0,
-        HR: aggregatedStats.HR || 0,
-        RBI: aggregatedStats.RBI || 0,
-        R: aggregatedStats.R || 0,
-        BB: aggregatedStats.BB || 0,
-        K: aggregatedStats.K || 0,
-        SB: aggregatedStats.SB || 0,
-        date: player.stats.date
+      // Create a new entry with current date
+      const newEntry = { ...player };
+      
+      // Update history
+      const updatedStats = [...allStats, newEntry];
+      setAllStats(updatedStats);
+      localStorage.setItem("playerStatsHistory", JSON.stringify(updatedStats));
+      
+      // Save current player state
+      localStorage.setItem("playerStats", JSON.stringify(player));
+      
+      toast({
+        title: t.statsSaved,
+        description: t.statsSuccessfullySaved,
+      });
+      
+      // Reset the modified flag
+      setDataModified(false);
+      
+      // Reset stats to zero after adding
+      setPlayer({
+        ...player,
+        stats: {
+          AB: 0,
+          H: 0,
+          doubles: 0,
+          triples: 0,
+          HR: 0,
+          RBI: 0,
+          R: 0,
+          BB: 0,
+          K: 0,
+          SB: 0,
+          date: new Date()
+        }
+      });
+    } else {
+      // Pitching stats
+      if (!pitching.date) {
+        pitching.date = new Date();
+      }
+      
+      // Create a new entry with current date
+      const newPitchingEntry = { 
+        ...pitching,
+        name: player.name,
+        position: player.position,
+        team: player.team
       };
       
-      setDayStats(typedDayStats);
-    } else {
-      setDayStats(null);
+      // Update history
+      const updatedPitchingStats = [...allPitchingStats, newPitchingEntry];
+      setAllPitchingStats(updatedPitchingStats);
+      localStorage.setItem("pitchingStatsHistory", JSON.stringify(updatedPitchingStats));
+      
+      // Save current pitching state
+      localStorage.setItem("pitchingStats", JSON.stringify(pitching));
+      
       toast({
-        title: t.noDataForDate,
-        description: format(player.stats.date, "PPP", { locale: language === "es" ? es : undefined }),
+        title: t.statsSaved,
+        description: t.statsSuccessfullySaved,
+      });
+      
+      // Reset the modified flag
+      setPitchingDataModified(false);
+      
+      // Reset pitching stats to zero after adding
+      setPitching({
+        IP: 0,
+        H: 0,
+        R: 0,
+        ER: 0,
+        BB: 0,
+        K: 0,
+        HBP: 0,
+        WP: 0,
+        BK: 0,
+        W: 0,
+        L: 0,
+        SV: 0,
+        date: new Date()
       });
     }
   };
 
+  const searchDayStats = () => {
+    if (activeTab === "batting") {
+      if (!player.stats.date) {
+        return;
+      }
+
+      setSelectedDate(player.stats.date);
+      setShowDayStats(true);
+      
+      // Find stats for this specific date
+      const statsForDay = allStats.filter(stat => {
+        if (!stat.stats.date) return false;
+        const statDate = new Date(stat.stats.date);
+        return statDate.toDateString() === player.stats.date?.toDateString();
+      });
+      
+      if (statsForDay.length > 0) {
+        // Calculate aggregate stats for this day - Fix the TypeScript error here
+        const aggregatedStats = calculateAggregateStatsForEntries(statsForDay);
+        
+        // Create a properly typed stats object
+        const typedDayStats: PlayerStats["stats"] = {
+          AB: aggregatedStats.AB || 0,
+          H: aggregatedStats.H || 0,
+          doubles: aggregatedStats.doubles || 0,
+          triples: aggregatedStats.triples || 0,
+          HR: aggregatedStats.HR || 0,
+          RBI: aggregatedStats.RBI || 0,
+          R: aggregatedStats.R || 0,
+          BB: aggregatedStats.BB || 0,
+          K: aggregatedStats.K || 0,
+          SB: aggregatedStats.SB || 0,
+          date: player.stats.date
+        };
+        
+        setDayStats(typedDayStats);
+      } else {
+        setDayStats(null);
+        toast({
+          title: t.noDataForDate,
+          description: format(player.stats.date, "PPP", { locale: language === "es" ? es : undefined }),
+        });
+      }
+    } else {
+      // Pitching stats
+      if (!pitching.date) {
+        return;
+      }
+
+      setSelectedDate(pitching.date);
+      setShowDayStats(true);
+      
+      // Find pitching stats for this specific date
+      const pitchingStatsForDay = allPitchingStats.filter(stat => {
+        if (!stat.date) return false;
+        const statDate = new Date(stat.date);
+        return statDate.toDateString() === pitching.date?.toDateString();
+      });
+      
+      if (pitchingStatsForDay.length > 0) {
+        // Calculate aggregate pitching stats for this day
+        const aggregatedPitchingStats = calculateAggregatePitchingStats(pitchingStatsForDay);
+        setDayPitchingStats(aggregatedPitchingStats);
+      } else {
+        setDayPitchingStats(null);
+        toast({
+          title: t.noDataForDate,
+          description: format(pitching.date, "PPP", { locale: language === "es" ? es : undefined }),
+        });
+      }
+    }
+  };
+
   const resetStats = () => {
-    // Clear all stats
-    setAllStats([]);
-    localStorage.removeItem("playerStatsHistory");
-    
-    // Reset current stats
-    setPlayer({
-      ...player,
-      stats: {
-        AB: 0,
+    if (activeTab === "batting") {
+      // Clear all batting stats
+      setAllStats([]);
+      localStorage.removeItem("playerStatsHistory");
+      
+      // Reset current batting stats
+      setPlayer({
+        ...player,
+        stats: {
+          AB: 0,
+          H: 0,
+          doubles: 0,
+          triples: 0,
+          HR: 0,
+          RBI: 0,
+          R: 0,
+          BB: 0,
+          K: 0,
+          SB: 0,
+          date: new Date()
+        }
+      });
+      
+      localStorage.setItem("playerStats", JSON.stringify({
+        ...player,
+        stats: {
+          AB: 0,
+          H: 0,
+          doubles: 0,
+          triples: 0,
+          HR: 0,
+          RBI: 0,
+          R: 0,
+          BB: 0,
+          K: 0,
+          SB: 0,
+          date: new Date()
+        }
+      }));
+    } else {
+      // Clear all pitching stats
+      setAllPitchingStats([]);
+      localStorage.removeItem("pitchingStatsHistory");
+      
+      // Reset current pitching stats
+      setPitching({
+        IP: 0,
         H: 0,
-        doubles: 0,
-        triples: 0,
-        HR: 0,
-        RBI: 0,
         R: 0,
+        ER: 0,
         BB: 0,
         K: 0,
-        SB: 0,
+        HBP: 0,
+        WP: 0,
+        BK: 0,
+        W: 0,
+        L: 0,
+        SV: 0,
         date: new Date()
-      }
-    });
-    
-    localStorage.setItem("playerStats", JSON.stringify({
-      ...player,
-      stats: {
-        AB: 0,
+      });
+      
+      localStorage.setItem("pitchingStats", JSON.stringify({
+        IP: 0,
         H: 0,
-        doubles: 0,
-        triples: 0,
-        HR: 0,
-        RBI: 0,
         R: 0,
+        ER: 0,
         BB: 0,
         K: 0,
-        SB: 0,
+        HBP: 0,
+        WP: 0,
+        BK: 0,
+        W: 0,
+        L: 0,
+        SV: 0,
         date: new Date()
-      }
-    }));
+      }));
+    }
     
     // Reset UI state
     setShowDayStats(false);
     setSelectedDate(null);
     setDataModified(false);
+    setPitchingDataModified(false);
     setDayStats(null);
+    setDayPitchingStats(null);
     
     toast({
       title: t.resetSuccess,
@@ -443,10 +704,27 @@ export default function Dashboard() {
     });
   };
   
+  const filterPitchingStatsByDate = () => {
+    if (!showDayStats || !selectedDate) {
+      return allPitchingStats;
+    }
+    
+    // Filter by specific date
+    return allPitchingStats.filter(stat => {
+      if (!stat.date) return false;
+      const statDate = new Date(stat.date);
+      return statDate.toDateString() === selectedDate.toDateString();
+    });
+  };
+  
   // This useMemo determines which stats to display based on whether we're showing all stats or just day stats
   const currentStats = useMemo(() => {
     return showDayStats ? filterStatsByDate() : allStats;
   }, [allStats, showDayStats, selectedDate]);
+  
+  const currentPitchingStats = useMemo(() => {
+    return showDayStats ? filterPitchingStatsByDate() : allPitchingStats;
+  }, [allPitchingStats, showDayStats, selectedDate]);
   
   // Helper function to calculate aggregate stats for a set of entries
   const calculateAggregateStatsForEntries = (entries: PlayerStats[]) => {
@@ -477,9 +755,45 @@ export default function Dashboard() {
     return aggregated;
   };
   
+  // Helper function to calculate aggregate pitching stats
+  const calculateAggregatePitchingStats = (entries: (PitchingStats & {name: string; team: string; position: string})[]) => {
+    if (entries.length === 0) {
+      return {
+        IP: 0,
+        H: 0,
+        R: 0,
+        ER: 0,
+        BB: 0,
+        K: 0,
+        HBP: 0,
+        WP: 0,
+        BK: 0,
+        W: 0,
+        L: 0,
+        SV: 0
+      };
+    }
+    
+    const aggregated: Record<string, number> = {};
+    
+    entries.forEach(stat => {
+      Object.entries(stat).forEach(([key, value]) => {
+        if (key !== 'date' && key !== 'name' && key !== 'team' && key !== 'position' && typeof value === 'number') {
+          aggregated[key] = (aggregated[key] || 0) + value;
+        }
+      });
+    });
+    
+    return aggregated;
+  };
+  
   const aggregateStats = useMemo(() => {
     return calculateAggregateStatsForEntries(currentStats);
   }, [currentStats]);
+  
+  const aggregatePitchingStats = useMemo(() => {
+    return calculateAggregatePitchingStats(currentPitchingStats);
+  }, [currentPitchingStats]);
 
   const exportToPDF = () => {
     const doc = new jsPDF();
@@ -523,90 +837,177 @@ export default function Dashboard() {
       y += 7;
     });
     
-    // Basic stats section
-    doc.setFontSize(16);
-    doc.setFont("helvetica", "bold");
-    doc.text(`${t.stats}:`, 20, 85);
-    
-    doc.setLineWidth(0.2);
-    doc.line(20, 88, 100, 88); // Underline section title
-    
-    // Stats in two columns with borders
-    const basicStats = [
-      [`AB: ${aggregateStats.AB || 0}`, `H: ${aggregateStats.H || 0}`],
-      [`2B: ${aggregateStats.doubles || 0}`, `3B: ${aggregateStats.triples || 0}`],
-      [`HR: ${aggregateStats.HR || 0}`, `RBI: ${aggregateStats.RBI || 0}`],
-      [`R: ${aggregateStats.R || 0}`, `BB: ${aggregateStats.BB || 0}`],
-      [`K: ${aggregateStats.K || 0}`, `SB: ${aggregateStats.SB || 0}`]
-    ];
-    
-    // Draw stats in a table-like format
-    y = 95;
-    doc.setFontSize(11);
-    doc.setFont("helvetica", "normal");
-    
-    // Create a light gray background for the stats table
-    doc.setFillColor(245, 245, 245);
-    doc.rect(25, y-5, 160, 50, 'F');
-    
-    // Draw table borders
-    doc.setDrawColor(180, 180, 180);
-    doc.setLineWidth(0.1);
-    doc.rect(25, y-5, 160, 50);
-    
-    // Draw horizontal lines
-    for (let i = 1; i < 5; i++) {
-      doc.line(25, y-5+i*10, 185, y-5+i*10);
+    if (activeTab === "batting") {
+      // Basic stats section
+      doc.setFontSize(16);
+      doc.setFont("helvetica", "bold");
+      doc.text(`${t.stats}:`, 20, 85);
+      
+      doc.setLineWidth(0.2);
+      doc.line(20, 88, 100, 88); // Underline section title
+      
+      // Stats in two columns with borders
+      const basicStats = [
+        [`AB: ${aggregateStats.AB || 0}`, `H: ${aggregateStats.H || 0}`],
+        [`2B: ${aggregateStats.doubles || 0}`, `3B: ${aggregateStats.triples || 0}`],
+        [`HR: ${aggregateStats.HR || 0}`, `RBI: ${aggregateStats.RBI || 0}`],
+        [`R: ${aggregateStats.R || 0}`, `BB: ${aggregateStats.BB || 0}`],
+        [`K: ${aggregateStats.K || 0}`, `SB: ${aggregateStats.SB || 0}`]
+      ];
+      
+      // Draw stats in a table-like format
+      y = 95;
+      doc.setFontSize(11);
+      doc.setFont("helvetica", "normal");
+      
+      // Create a light gray background for the stats table
+      doc.setFillColor(245, 245, 245);
+      doc.rect(25, y-5, 160, 50, 'F');
+      
+      // Draw table borders
+      doc.setDrawColor(180, 180, 180);
+      doc.setLineWidth(0.1);
+      doc.rect(25, y-5, 160, 50);
+      
+      // Draw horizontal lines
+      for (let i = 1; i < 5; i++) {
+        doc.line(25, y-5+i*10, 185, y-5+i*10);
+      }
+      
+      // Draw vertical line in middle
+      doc.line(105, y-5, 105, y+45);
+      
+      // Add stats text
+      basicStats.forEach((row, index) => {
+        doc.text(row[0], 30, y + index * 10);
+        doc.text(row[1], 110, y + index * 10);
+      });
+      
+      // Advanced stats section
+      doc.setFontSize(16);
+      doc.setFont("helvetica", "bold");
+      doc.text(`${t.advancedStats}:`, 20, 155);
+      
+      doc.setLineWidth(0.2);
+      doc.line(20, 158, 120, 158); // Underline section title
+      
+      // Create another table for advanced stats
+      const advancedStats = [
+        [`${t.avg.title}: ${calcAVG(aggregateStats)}`, `${t.obp.title}: ${calcOBP(aggregateStats)}`],
+        [`${t.slg.title}: ${calcSLG(aggregateStats)}`, `${t.ops.title}: ${calcOPS(aggregateStats)}`]
+      ];
+      
+      // Draw advanced stats in a table-like format
+      y = 165;
+      doc.setFontSize(11);
+      doc.setFont("helvetica", "normal");
+      
+      // Create a light blue background for the advanced stats
+      doc.setFillColor(235, 245, 255);
+      doc.rect(25, y-5, 160, 25, 'F');
+      
+      // Draw table borders
+      doc.setDrawColor(180, 180, 180);
+      doc.setLineWidth(0.1);
+      doc.rect(25, y-5, 160, 25);
+      
+      // Draw horizontal line
+      doc.line(25, y+5, 185, y+5);
+      
+      // Draw vertical line in middle
+      doc.line(105, y-5, 105, y+20);
+      
+      // Add advanced stats text
+      advancedStats.forEach((row, index) => {
+        doc.text(row[0], 30, y + index * 10);
+        doc.text(row[1], 110, y + index * 10);
+      });
+    } else {
+      // Pitching stats section
+      doc.setFontSize(16);
+      doc.setFont("helvetica", "bold");
+      doc.text(`${t.pitchingStats}:`, 20, 85);
+      
+      doc.setLineWidth(0.2);
+      doc.line(20, 88, 120, 88); // Underline section title
+      
+      // Stats in two columns with borders
+      const pitchingBasicStats = [
+        [`IP: ${aggregatePitchingStats.IP || 0}`, `H: ${aggregatePitchingStats.H || 0}`],
+        [`R: ${aggregatePitchingStats.R || 0}`, `ER: ${aggregatePitchingStats.ER || 0}`],
+        [`BB: ${aggregatePitchingStats.BB || 0}`, `K: ${aggregatePitchingStats.K || 0}`],
+        [`HBP: ${aggregatePitchingStats.HBP || 0}`, `WP: ${aggregatePitchingStats.WP || 0}`],
+        [`BK: ${aggregatePitchingStats.BK || 0}`, `W: ${aggregatePitchingStats.W || 0}-${aggregatePitchingStats.L || 0}, SV: ${aggregatePitchingStats.SV || 0}`]
+      ];
+      
+      // Draw stats in a table-like format
+      y = 95;
+      doc.setFontSize(11);
+      doc.setFont("helvetica", "normal");
+      
+      // Create a light gray background for the stats table
+      doc.setFillColor(245, 245, 245);
+      doc.rect(25, y-5, 160, 50, 'F');
+      
+      // Draw table borders
+      doc.setDrawColor(180, 180, 180);
+      doc.setLineWidth(0.1);
+      doc.rect(25, y-5, 160, 50);
+      
+      // Draw horizontal lines
+      for (let i = 1; i < 5; i++) {
+        doc.line(25, y-5+i*10, 185, y-5+i*10);
+      }
+      
+      // Draw vertical line in middle
+      doc.line(105, y-5, 105, y+45);
+      
+      // Add stats text
+      pitchingBasicStats.forEach((row, index) => {
+        doc.text(row[0], 30, y + index * 10);
+        doc.text(row[1], 110, y + index * 10);
+      });
+      
+      // Advanced stats section
+      doc.setFontSize(16);
+      doc.setFont("helvetica", "bold");
+      doc.text(`${t.advancedStats}:`, 20, 155);
+      
+      doc.setLineWidth(0.2);
+      doc.line(20, 158, 120, 158); // Underline section title
+      
+      // Create another table for advanced stats
+      const advancedPitchingStats = [
+        [`${t.era.title}: ${calcERA(aggregatePitchingStats)}`, `${t.whip.title}: ${calcWHIP(aggregatePitchingStats)}`],
+        [`${t.kbb.title}: ${calcKBB(aggregatePitchingStats)}`, `${t.k9.title}: ${calcK9(aggregatePitchingStats)}`]
+      ];
+      
+      // Draw advanced stats in a table-like format
+      y = 165;
+      doc.setFontSize(11);
+      doc.setFont("helvetica", "normal");
+      
+      // Create a light blue background for the advanced stats
+      doc.setFillColor(235, 245, 255);
+      doc.rect(25, y-5, 160, 25, 'F');
+      
+      // Draw table borders
+      doc.setDrawColor(180, 180, 180);
+      doc.setLineWidth(0.1);
+      doc.rect(25, y-5, 160, 25);
+      
+      // Draw horizontal line
+      doc.line(25, y+5, 185, y+5);
+      
+      // Draw vertical line in middle
+      doc.line(105, y-5, 105, y+20);
+      
+      // Add advanced stats text
+      advancedPitchingStats.forEach((row, index) => {
+        doc.text(row[0], 30, y + index * 10);
+        doc.text(row[1], 110, y + index * 10);
+      });
     }
-    
-    // Draw vertical line in middle
-    doc.line(105, y-5, 105, y+45);
-    
-    // Add stats text
-    basicStats.forEach((row, index) => {
-      doc.text(row[0], 30, y + index * 10);
-      doc.text(row[1], 110, y + index * 10);
-    });
-    
-    // Advanced stats section
-    doc.setFontSize(16);
-    doc.setFont("helvetica", "bold");
-    doc.text(`${t.advancedStats}:`, 20, 155);
-    
-    doc.setLineWidth(0.2);
-    doc.line(20, 158, 120, 158); // Underline section title
-    
-    // Create another table for advanced stats
-    const advancedStats = [
-      [`${t.avg.title}: ${calcAVG(aggregateStats)}`, `${t.obp.title}: ${calcOBP(aggregateStats)}`],
-      [`${t.slg.title}: ${calcSLG(aggregateStats)}`, `${t.ops.title}: ${calcOPS(aggregateStats)}`]
-    ];
-    
-    // Draw advanced stats in a table-like format
-    y = 165;
-    doc.setFontSize(11);
-    doc.setFont("helvetica", "normal");
-    
-    // Create a light blue background for the advanced stats
-    doc.setFillColor(235, 245, 255);
-    doc.rect(25, y-5, 160, 25, 'F');
-    
-    // Draw table borders
-    doc.setDrawColor(180, 180, 180);
-    doc.setLineWidth(0.1);
-    doc.rect(25, y-5, 160, 25);
-    
-    // Draw horizontal line
-    doc.line(25, y+5, 185, y+5);
-    
-    // Draw vertical line in middle
-    doc.line(105, y-5, 105, y+20);
-    
-    // Add advanced stats text
-    advancedStats.forEach((row, index) => {
-      doc.text(row[0], 30, y + index * 10);
-      doc.text(row[1], 110, y + index * 10);
-    });
     
     // Add timestamp at the bottom
     const today = new Date();
@@ -650,6 +1051,32 @@ export default function Dashboard() {
     const slg = parseFloat(calcSLG(stats));
     return (obp + slg).toFixed(3);
   };
+  
+  // Pitching statistics calculations
+  const calcERA = (stats: Record<string, number>) => {
+    const ER = stats.ER || 0;
+    const IP = stats.IP || 0;
+    return IP ? ((ER * 9) / IP).toFixed(2) : "0.00";
+  };
+  
+  const calcWHIP = (stats: Record<string, number>) => {
+    const H = stats.H || 0;
+    const BB = stats.BB || 0;
+    const IP = stats.IP || 0;
+    return IP ? ((H + BB) / IP).toFixed(2) : "0.00";
+  };
+  
+  const calcKBB = (stats: Record<string, number>) => {
+    const K = stats.K || 0;
+    const BB = stats.BB || 0;
+    return BB ? (K / BB).toFixed(2) : K > 0 ? "∞" : "0.00";
+  };
+  
+  const calcK9 = (stats: Record<string, number>) => {
+    const K = stats.K || 0;
+    const IP = stats.IP || 0;
+    return IP ? ((K * 9) / IP).toFixed(2) : "0.00";
+  };
 
   return (
     <div className={`max-w-7xl mx-auto p-4 ${darkMode ? 'dark' : ''}`}>
@@ -682,56 +1109,125 @@ export default function Dashboard() {
         </div>
       </header>
 
-      <PlayerCard player={player} onPlayerChange={handlePlayerChange} language={language} translations={translations} />
-      
-      <StatsForm 
-        stats={player.stats} 
-        onStatsChange={handleStatsChange} 
-        onDateChange={handleDateChange}
+      <PlayerCard 
+        player={player} 
+        onPlayerChange={handlePlayerChange} 
+        onPositionSelect={handlePositionSelect}
         language={language} 
-        translations={translations}
-        onAddStats={addStats}
-        onSearchDay={searchDayStats}
-        onResetStats={resetStats}
-        dataModified={dataModified}
-        dayStats={dayStats || undefined}
-        isShowingDayStats={showDayStats}
+        translations={translations} 
       />
-
-      <Card className="bg-white dark:bg-gray-900 shadow-md hover:shadow-lg transition-shadow duration-300">
-        <CardHeader>
-          <CardTitle className="text-xl font-bold text-center">
-            {t.advancedStats}
-            {showDayStats && selectedDate && (
-              <span className="block text-sm font-normal text-muted-foreground mt-1">
-                {format(selectedDate, "PPP", { locale: language === "es" ? es : undefined })}
-              </span>
-            )}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-6 p-6">
-          <div className="stat-card bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900 dark:to-blue-800 p-4 rounded-lg border shadow-sm text-center">
-            <h2 className="text-lg font-bold text-blue-700 dark:text-blue-300">{t.avg.title}</h2>
-            <p className="text-3xl font-semibold">{calcAVG(aggregateStats)}</p>
-            <p className="text-sm text-muted-foreground mt-1">{t.avg.description}</p>
-          </div>
-          <div className="stat-card bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900 dark:to-green-800 p-4 rounded-lg border shadow-sm text-center">
-            <h2 className="text-lg font-bold text-green-700 dark:text-green-300">{t.obp.title}</h2>
-            <p className="text-3xl font-semibold">{calcOBP(aggregateStats)}</p>
-            <p className="text-sm text-muted-foreground mt-1">{t.obp.description}</p>
-          </div>
-          <div className="stat-card bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900 dark:to-purple-800 p-4 rounded-lg border shadow-sm text-center">
-            <h2 className="text-lg font-bold text-purple-700 dark:text-purple-300">{t.slg.title}</h2>
-            <p className="text-3xl font-semibold">{calcSLG(aggregateStats)}</p>
-            <p className="text-sm text-muted-foreground mt-1">{t.slg.description}</p>
-          </div>
-          <div className="stat-card bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900 dark:to-red-800 p-4 rounded-lg border shadow-sm text-center">
-            <h2 className="text-lg font-bold text-red-700 dark:text-red-300">{t.ops.title}</h2>
-            <p className="text-3xl font-semibold">{calcOPS(aggregateStats)}</p>
-            <p className="text-sm text-muted-foreground mt-1">{t.ops.description}</p>
-          </div>
-        </CardContent>
-      </Card>
+      
+      <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as "batting" | "pitching")} className="mb-6">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="batting">
+            {t.battingTab}
+          </TabsTrigger>
+          <TabsTrigger value="pitching" className="flex items-center gap-2">
+            <Baseball className="h-4 w-4" />
+            {t.pitchingTab}
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="batting" className="tab-content">
+          <StatsForm 
+            stats={player.stats} 
+            onStatsChange={handleStatsChange} 
+            onDateChange={handleDateChange}
+            language={language} 
+            translations={translations}
+            onAddStats={addStats}
+            onSearchDay={searchDayStats}
+            onResetStats={resetStats}
+            dataModified={dataModified}
+            dayStats={dayStats || undefined}
+            isShowingDayStats={showDayStats}
+          />
+          
+          <Card className="bg-white dark:bg-gray-900 shadow-md hover:shadow-lg transition-shadow duration-300">
+            <CardHeader>
+              <CardTitle className="text-xl font-bold text-center">
+                {t.advancedStats}
+                {showDayStats && selectedDate && (
+                  <span className="block text-sm font-normal text-muted-foreground mt-1">
+                    {format(selectedDate, "PPP", { locale: language === "es" ? es : undefined })}
+                  </span>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-6 p-6">
+              <div className="stat-card bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900 dark:to-blue-800 p-4 rounded-lg border shadow-sm text-center">
+                <h2 className="text-lg font-bold text-blue-700 dark:text-blue-300">{t.avg.title}</h2>
+                <p className="text-3xl font-semibold">{calcAVG(aggregateStats)}</p>
+                <p className="text-sm text-muted-foreground mt-1">{t.avg.description}</p>
+              </div>
+              <div className="stat-card bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900 dark:to-green-800 p-4 rounded-lg border shadow-sm text-center">
+                <h2 className="text-lg font-bold text-green-700 dark:text-green-300">{t.obp.title}</h2>
+                <p className="text-3xl font-semibold">{calcOBP(aggregateStats)}</p>
+                <p className="text-sm text-muted-foreground mt-1">{t.obp.description}</p>
+              </div>
+              <div className="stat-card bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900 dark:to-purple-800 p-4 rounded-lg border shadow-sm text-center">
+                <h2 className="text-lg font-bold text-purple-700 dark:text-purple-300">{t.slg.title}</h2>
+                <p className="text-3xl font-semibold">{calcSLG(aggregateStats)}</p>
+                <p className="text-sm text-muted-foreground mt-1">{t.slg.description}</p>
+              </div>
+              <div className="stat-card bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900 dark:to-red-800 p-4 rounded-lg border shadow-sm text-center">
+                <h2 className="text-lg font-bold text-red-700 dark:text-red-300">{t.ops.title}</h2>
+                <p className="text-3xl font-semibold">{calcOPS(aggregateStats)}</p>
+                <p className="text-sm text-muted-foreground mt-1">{t.ops.description}</p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        <TabsContent value="pitching" className="tab-content">
+          <PitchingStatsForm 
+            stats={pitching}
+            onStatsChange={handlePitchingStatsChange}
+            onDateChange={handleDateChange}
+            language={language}
+            translations={translations}
+            onAddStats={addStats}
+            onSearchDay={searchDayStats}
+            onResetStats={resetStats}
+            dataModified={pitchingDataModified}
+            dayStats={dayPitchingStats || undefined}
+            isShowingDayStats={showDayStats}
+          />
+          
+          <Card className="bg-white dark:bg-gray-900 shadow-md hover:shadow-lg transition-shadow duration-300">
+            <CardHeader>
+              <CardTitle className="text-xl font-bold text-center">
+                {t.advancedStats}
+                {showDayStats && selectedDate && (
+                  <span className="block text-sm font-normal text-muted-foreground mt-1">
+                    {format(selectedDate, "PPP", { locale: language === "es" ? es : undefined })}
+                  </span>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-6 p-6">
+              <div className="stat-card bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900 dark:to-blue-800 p-4 rounded-lg border shadow-sm text-center">
+                <h2 className="text-lg font-bold text-blue-700 dark:text-blue-300">{t.era.title}</h2>
+                <p className="text-3xl font-semibold">{calcERA(aggregatePitchingStats)}</p>
+                <p className="text-sm text-muted-foreground mt-1">{t.era.description}</p>
+              </div>
+              <div className="stat-card bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900 dark:to-green-800 p-4 rounded-lg border shadow-sm text-center">
+                <h2 className="text-lg font-bold text-green-700 dark:text-green-300">{t.whip.title}</h2>
+                <p className="text-3xl font-semibold">{calcWHIP(aggregatePitchingStats)}</p>
+                <p className="text-sm text-muted-foreground mt-1">{t.whip.description}</p>
+              </div>
+              <div className="stat-card bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900 dark:to-purple-800 p-4 rounded-lg border shadow-sm text-center">
+                <h2 className="text-lg font-bold text-purple-700 dark:text-purple-300">{t.kbb.title}</h2>
+                <p className="text-3xl font-semibold">{calcKBB(aggregatePitchingStats)}</p>
+                <p className="text-sm text-muted-foreground mt-1">{t.kbb.description}</p>
+              </div>
+              <div className="stat-card bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900 dark:to-red-800 p-4 rounded-lg border shadow-sm text-center">
+                <h2 className="text-lg font-bold text-red-700 dark:text-red-300">{t.k9.title}</h2>
+                <p className="text-3xl font-semibold">{calcK9(aggregatePitchingStats)}</p>
+                <p className="text-sm text-muted-foreground mt-1">{t.k9.description}</p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       <div className="mt-8 flex justify-center gap-4">
         <Button variant="secondary" size="lg" onClick={exportToPDF} className="px-8">

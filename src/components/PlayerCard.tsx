@@ -7,6 +7,10 @@ import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogClose, DialogFooter } from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
+import { Check, ChevronDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface PlayerData {
   name: string;
@@ -18,6 +22,7 @@ interface PlayerData {
 interface PlayerCardProps {
   player: PlayerData;
   onPlayerChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onPositionSelect: (position: string) => void;
   language: "en" | "es";
   translations: {
     es: {
@@ -32,6 +37,9 @@ interface PlayerCardProps {
       apply: string;
       cancel: string;
       movePhoto: string;
+      selectPosition: string;
+      searchPosition: string;
+      noPositionFound: string;
     };
     en: {
       playerInfo: string;
@@ -45,11 +53,28 @@ interface PlayerCardProps {
       apply: string;
       cancel: string;
       movePhoto: string;
+      selectPosition: string;
+      searchPosition: string;
+      noPositionFound: string;
     };
   };
 }
 
-export default function PlayerCard({ player, onPlayerChange, language, translations }: PlayerCardProps) {
+const positions = [
+  { value: "P", label: "Pitcher" },
+  { value: "C", label: "Catcher" },
+  { value: "1B", label: "First Base" },
+  { value: "2B", label: "Second Base" },
+  { value: "3B", label: "Third Base" },
+  { value: "SS", label: "Shortstop" },
+  { value: "LF", label: "Left Field" },
+  { value: "CF", label: "Center Field" },
+  { value: "RF", label: "Right Field" },
+  { value: "DH", label: "Designated Hitter" },
+  { value: "UTIL", label: "Utility" },
+];
+
+export default function PlayerCard({ player, onPlayerChange, onPositionSelect, language, translations }: PlayerCardProps) {
   const t = translations[language];
   const [isAdjusting, setIsAdjusting] = useState(false);
   const [zoom, setZoom] = useState(100);
@@ -58,6 +83,7 @@ export default function PlayerCard({ player, onPlayerChange, language, translati
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [showPhotoDialog, setShowPhotoDialog] = useState(false);
+  const [openPositionSelect, setOpenPositionSelect] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageRef = useRef<HTMLDivElement>(null);
@@ -193,6 +219,16 @@ export default function PlayerCard({ player, onPlayerChange, language, translati
     }
   }, [showPhotoDialog]);
 
+  const handlePositionSelect = (selectedPosition: string) => {
+    onPositionSelect(selectedPosition);
+    setOpenPositionSelect(false);
+  };
+
+  const getPositionLabel = (value: string) => {
+    const position = positions.find(pos => pos.value === value);
+    return position ? position.label : value;
+  };
+
   return (
     <Card className="mb-6 bg-white dark:bg-gray-900 shadow-md hover:shadow-lg transition-shadow duration-300">
       <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4 p-6">
@@ -300,14 +336,42 @@ export default function PlayerCard({ player, onPlayerChange, language, translati
           </div>
           <div>
             <Label htmlFor="position" className="text-lg font-medium">{t.position}</Label>
-            <Input 
-              id="position"
-              name="position" 
-              value={player.position} 
-              onChange={onPlayerChange} 
-              className="mt-1"
-              placeholder="CF, 3B, SS, P, etc."
-            />
+            <Popover open={openPositionSelect} onOpenChange={setOpenPositionSelect}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={openPositionSelect}
+                  className="w-full justify-between mt-1"
+                >
+                  {player.position ? getPositionLabel(player.position) : t.selectPosition || "Select position..."}
+                  <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-full p-0">
+                <Command>
+                  <CommandInput placeholder={t.searchPosition || "Search position..."} />
+                  <CommandEmpty>{t.noPositionFound || "No position found."}</CommandEmpty>
+                  <CommandGroup>
+                    {positions.map((pos) => (
+                      <CommandItem
+                        key={pos.value}
+                        value={pos.value}
+                        onSelect={() => handlePositionSelect(pos.value)}
+                      >
+                        <Check
+                          className={cn(
+                            "mr-2 h-4 w-4",
+                            player.position === pos.value ? "opacity-100" : "opacity-0"
+                          )}
+                        />
+                        {pos.label}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </Command>
+              </PopoverContent>
+            </Popover>
           </div>
           <div>
             <Label htmlFor="team" className="text-lg font-medium">{t.team}</Label>
