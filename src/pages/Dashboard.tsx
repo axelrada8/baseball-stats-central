@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,7 +6,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Download, Globe, Baseball } from "lucide-react";
+import { Download, Globe, PenSquare } from "lucide-react";
 import { jsPDF } from "jspdf";
 import { format, isEqual } from "date-fns";
 import { es } from "date-fns/locale";
@@ -581,7 +580,25 @@ export default function Dashboard() {
       if (pitchingStatsForDay.length > 0) {
         // Calculate aggregate pitching stats for this day
         const aggregatedPitchingStats = calculateAggregatePitchingStats(pitchingStatsForDay);
-        setDayPitchingStats(aggregatedPitchingStats);
+        
+        // Create a properly typed pitching stats object
+        const typedPitchingStats: PitchingStats = {
+          IP: aggregatedPitchingStats.IP || 0,
+          H: aggregatedPitchingStats.H || 0,
+          R: aggregatedPitchingStats.R || 0,
+          ER: aggregatedPitchingStats.ER || 0,
+          BB: aggregatedPitchingStats.BB || 0,
+          K: aggregatedPitchingStats.K || 0,
+          HBP: aggregatedPitchingStats.HBP || 0,
+          WP: aggregatedPitchingStats.WP || 0,
+          BK: aggregatedPitchingStats.BK || 0,
+          W: aggregatedPitchingStats.W || 0,
+          L: aggregatedPitchingStats.L || 0,
+          SV: aggregatedPitchingStats.SV || 0,
+          date: pitching.date
+        };
+        
+        setDayPitchingStats(typedPitchingStats);
       } else {
         setDayPitchingStats(null);
         toast({
@@ -1123,7 +1140,7 @@ export default function Dashboard() {
             {t.battingTab}
           </TabsTrigger>
           <TabsTrigger value="pitching" className="flex items-center gap-2">
-            <Baseball className="h-4 w-4" />
+            <PenSquare className="h-4 w-4" />
             {t.pitchingTab}
           </TabsTrigger>
         </TabsList>
