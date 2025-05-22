@@ -6,7 +6,14 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Download, Globe, PenSquare } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Download, Calculator, Globe, PenSquare } from "lucide-react";
 import { jsPDF } from "jspdf";
 import { format, isEqual } from "date-fns";
 import { es } from "date-fns/locale";
@@ -151,7 +158,13 @@ const translations = {
     noPositionFound: "No se encontró ninguna posición.",
     battingTab: "Bateo",
     pitchingTab: "Pitcheo",
-    pitchingStats: "Estadísticas de Pitcheo"
+    pitchingStats: "Estadísticas de Pitcheo",
+    viewTotalStats: "Ver Totales",
+    totalStats: "Estadísticas Totales",
+    totalStatsDescription: "Resumen de todas las estadísticas agregadas",
+    close: "Cerrar",
+    dateRange: "Rango de Fechas",
+    allDates: "Todas las Fechas"
   },
   en: {
     title: "⚾ Baseball Statistics",
@@ -252,7 +265,13 @@ const translations = {
     noPositionFound: "No position found.",
     battingTab: "Batting",
     pitchingTab: "Pitching",
-    pitchingStats: "Pitching Statistics"
+    pitchingStats: "Pitching Statistics",
+    viewTotalStats: "View Totals",
+    totalStats: "Total Statistics",
+    totalStatsDescription: "Summary of all added statistics",
+    close: "Close",
+    dateRange: "Date Range",
+    allDates: "All Dates"
   }
 };
 
@@ -297,6 +316,7 @@ export default function Dashboard() {
   const [user, setUser] = useState<{ name?: string; email: string } | null>(null);
   const [darkMode, setDarkMode] = useState<boolean>(false);
   const [language, setLanguage] = useState<"es" | "en">("es");
+  const [showTotalsDialog, setShowTotalsDialog] = useState<boolean>(false);
   const t = translations[language];
   const [dataModified, setDataModified] = useState(false);
   const [pitchingDataModified, setPitchingDataModified] = useState(false);
@@ -811,6 +831,19 @@ export default function Dashboard() {
   const aggregatePitchingStats = useMemo(() => {
     return calculateAggregatePitchingStats(currentPitchingStats);
   }, [currentPitchingStats]);
+  
+  // Aggregate all stats (not filtered by date)
+  const allTimeAggregateStats = useMemo(() => {
+    return calculateAggregateStatsForEntries(allStats);
+  }, [allStats]);
+  
+  const allTimeAggregatePitchingStats = useMemo(() => {
+    return calculateAggregatePitchingStats(allPitchingStats);
+  }, [allPitchingStats]);
+
+  const handleViewTotals = () => {
+    setShowTotalsDialog(true);
+  };
 
   const exportToPDF = () => {
     const doc = new jsPDF();
@@ -1252,7 +1285,178 @@ export default function Dashboard() {
           <Download className="mr-2" />
           {t.exportPDF}
         </Button>
+        
+        <Button variant="default" size="lg" onClick={handleViewTotals} className="px-8">
+          <Calculator className="mr-2" />
+          {t.viewTotalStats}
+        </Button>
       </div>
+
+      {/* Dialog para mostrar estadísticas totales */}
+      <Dialog open={showTotalsDialog} onOpenChange={setShowTotalsDialog}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold">{t.totalStats}</DialogTitle>
+            <DialogDescription>{t.totalStatsDescription}</DialogDescription>
+          </DialogHeader>
+
+          <div className="py-4">
+            <h3 className="text-lg font-semibold mb-4">{t.dateRange}: {t.allDates}</h3>
+            
+            <div className="space-y-6">
+              {/* Batting Stats */}
+              <div className="p-4 border rounded-lg bg-slate-50 dark:bg-slate-900">
+                <h4 className="font-bold text-md mb-2 flex items-center gap-2">
+                  <span role="img" aria-label="batting">🏏</span>
+                  {t.battingTab}
+                </h4>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  <div className="stat-item">
+                    <span className="text-muted-foreground text-sm">{t.statLabels.AB}:</span>
+                    <span className="font-medium ml-2">{allTimeAggregateStats.AB || 0}</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="text-muted-foreground text-sm">{t.statLabels.H}:</span>
+                    <span className="font-medium ml-2">{allTimeAggregateStats.H || 0}</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="text-muted-foreground text-sm">{t.statLabels.doubles}:</span>
+                    <span className="font-medium ml-2">{allTimeAggregateStats.doubles || 0}</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="text-muted-foreground text-sm">{t.statLabels.triples}:</span>
+                    <span className="font-medium ml-2">{allTimeAggregateStats.triples || 0}</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="text-muted-foreground text-sm">{t.statLabels.HR}:</span>
+                    <span className="font-medium ml-2">{allTimeAggregateStats.HR || 0}</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="text-muted-foreground text-sm">{t.statLabels.RBI}:</span>
+                    <span className="font-medium ml-2">{allTimeAggregateStats.RBI || 0}</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="text-muted-foreground text-sm">{t.statLabels.R}:</span>
+                    <span className="font-medium ml-2">{allTimeAggregateStats.R || 0}</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="text-muted-foreground text-sm">{t.statLabels.BB}:</span>
+                    <span className="font-medium ml-2">{allTimeAggregateStats.BB || 0}</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="text-muted-foreground text-sm">{t.statLabels.K}:</span>
+                    <span className="font-medium ml-2">{allTimeAggregateStats.K || 0}</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="text-muted-foreground text-sm">{t.statLabels.SB}:</span>
+                    <span className="font-medium ml-2">{allTimeAggregateStats.SB || 0}</span>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-4 pt-3 border-t">
+                  <div className="stat-item">
+                    <span className="text-muted-foreground text-sm">{t.avg.title}:</span>
+                    <span className="font-medium ml-2">{calcAVG(allTimeAggregateStats)}</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="text-muted-foreground text-sm">{t.obp.title}:</span>
+                    <span className="font-medium ml-2">{calcOBP(allTimeAggregateStats)}</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="text-muted-foreground text-sm">{t.slg.title}:</span>
+                    <span className="font-medium ml-2">{calcSLG(allTimeAggregateStats)}</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="text-muted-foreground text-sm">{t.ops.title}:</span>
+                    <span className="font-medium ml-2">{calcOPS(allTimeAggregateStats)}</span>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Pitching Stats */}
+              <div className="p-4 border rounded-lg bg-slate-50 dark:bg-slate-900">
+                <h4 className="font-bold text-md mb-2 flex items-center gap-2">
+                  <span role="img" aria-label="pitching">⚾</span>
+                  {t.pitchingTab}
+                </h4>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  <div className="stat-item">
+                    <span className="text-muted-foreground text-sm">{t.pitchingStatLabels.IP}:</span>
+                    <span className="font-medium ml-2">{allTimeAggregatePitchingStats.IP || 0}</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="text-muted-foreground text-sm">{t.pitchingStatLabels.H}:</span>
+                    <span className="font-medium ml-2">{allTimeAggregatePitchingStats.H || 0}</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="text-muted-foreground text-sm">{t.pitchingStatLabels.R}:</span>
+                    <span className="font-medium ml-2">{allTimeAggregatePitchingStats.R || 0}</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="text-muted-foreground text-sm">{t.pitchingStatLabels.ER}:</span>
+                    <span className="font-medium ml-2">{allTimeAggregatePitchingStats.ER || 0}</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="text-muted-foreground text-sm">{t.pitchingStatLabels.BB}:</span>
+                    <span className="font-medium ml-2">{allTimeAggregatePitchingStats.BB || 0}</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="text-muted-foreground text-sm">{t.pitchingStatLabels.K}:</span>
+                    <span className="font-medium ml-2">{allTimeAggregatePitchingStats.K || 0}</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="text-muted-foreground text-sm">{t.pitchingStatLabels.HBP}:</span>
+                    <span className="font-medium ml-2">{allTimeAggregatePitchingStats.HBP || 0}</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="text-muted-foreground text-sm">{t.pitchingStatLabels.WP}:</span>
+                    <span className="font-medium ml-2">{allTimeAggregatePitchingStats.WP || 0}</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="text-muted-foreground text-sm">{t.pitchingStatLabels.BK}:</span>
+                    <span className="font-medium ml-2">{allTimeAggregatePitchingStats.BK || 0}</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="text-muted-foreground text-sm">{t.pitchingStatLabels.W}-{t.pitchingStatLabels.L}:</span>
+                    <span className="font-medium ml-2">
+                      {allTimeAggregatePitchingStats.W || 0}-{allTimeAggregatePitchingStats.L || 0}
+                    </span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="text-muted-foreground text-sm">{t.pitchingStatLabels.SV}:</span>
+                    <span className="font-medium ml-2">{allTimeAggregatePitchingStats.SV || 0}</span>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-4 pt-3 border-t">
+                  <div className="stat-item">
+                    <span className="text-muted-foreground text-sm">{t.era.title}:</span>
+                    <span className="font-medium ml-2">{calcERA(allTimeAggregatePitchingStats)}</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="text-muted-foreground text-sm">{t.whip.title}:</span>
+                    <span className="font-medium ml-2">{calcWHIP(allTimeAggregatePitchingStats)}</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="text-muted-foreground text-sm">{t.kbb.title}:</span>
+                    <span className="font-medium ml-2">{calcKBB(allTimeAggregatePitchingStats)}</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="text-muted-foreground text-sm">{t.k9.title}:</span>
+                    <span className="font-medium ml-2">{calcK9(allTimeAggregatePitchingStats)}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex justify-center mt-4">
+            <Button onClick={() => setShowTotalsDialog(false)}>
+              {t.close}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
