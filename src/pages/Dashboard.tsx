@@ -1136,11 +1136,12 @@ export default function Dashboard() {
       
       <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as "batting" | "pitching")} className="mb-6">
         <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="batting">
+          <TabsTrigger value="batting" className="flex items-center gap-2">
+            <span role="img" aria-label="batting" className="text-lg">🏏</span>
             {t.battingTab}
           </TabsTrigger>
           <TabsTrigger value="pitching" className="flex items-center gap-2">
-            <PenSquare className="h-4 w-4" />
+            <span role="img" aria-label="pitching" className="text-lg">⚾</span>
             {t.pitchingTab}
           </TabsTrigger>
         </TabsList>

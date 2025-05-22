@@ -11,6 +11,15 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
 import { Check, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  SelectGroup,
+  SelectLabel
+} from "@/components/ui/select";
 
 interface PlayerData {
   name: string;
@@ -61,17 +70,17 @@ interface PlayerCardProps {
 }
 
 const positions = [
-  { value: "P", label: "Pitcher" },
-  { value: "C", label: "Catcher" },
-  { value: "1B", label: "First Base" },
-  { value: "2B", label: "Second Base" },
-  { value: "3B", label: "Third Base" },
-  { value: "SS", label: "Shortstop" },
-  { value: "LF", label: "Left Field" },
-  { value: "CF", label: "Center Field" },
-  { value: "RF", label: "Right Field" },
-  { value: "DH", label: "Designated Hitter" },
-  { value: "UTIL", label: "Utility" },
+  { value: "P", label: "Pitcher", emoji: "⚾" },
+  { value: "C", label: "Catcher", emoji: "🧤" },
+  { value: "1B", label: "First Base", emoji: "🥇" },
+  { value: "2B", label: "Second Base", emoji: "🥈" },
+  { value: "3B", label: "Third Base", emoji: "🥉" },
+  { value: "SS", label: "Shortstop", emoji: "🔹" },
+  { value: "LF", label: "Left Field", emoji: "🌿" },
+  { value: "CF", label: "Center Field", emoji: "🎯" },
+  { value: "RF", label: "Right Field", emoji: "🌟" },
+  { value: "DH", label: "Designated Hitter", emoji: "🏏" },
+  { value: "UTIL", label: "Utility", emoji: "🔧" },
 ];
 
 export default function PlayerCard({ player, onPlayerChange, onPositionSelect, language, translations }: PlayerCardProps) {
@@ -83,7 +92,6 @@ export default function PlayerCard({ player, onPlayerChange, onPositionSelect, l
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [showPhotoDialog, setShowPhotoDialog] = useState(false);
-  const [openPositionSelect, setOpenPositionSelect] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageRef = useRef<HTMLDivElement>(null);
@@ -221,12 +229,16 @@ export default function PlayerCard({ player, onPlayerChange, onPositionSelect, l
 
   const handlePositionSelect = (selectedPosition: string) => {
     onPositionSelect(selectedPosition);
-    setOpenPositionSelect(false);
   };
 
   const getPositionLabel = (value: string) => {
     const position = positions.find(pos => pos.value === value);
     return position ? position.label : value;
+  };
+
+  const getPositionEmoji = (value: string) => {
+    const position = positions.find(pos => pos.value === value);
+    return position ? position.emoji : "";
   };
 
   return (
@@ -336,42 +348,31 @@ export default function PlayerCard({ player, onPlayerChange, onPositionSelect, l
           </div>
           <div>
             <Label htmlFor="position" className="text-lg font-medium">{t.position}</Label>
-            <Popover open={openPositionSelect} onOpenChange={setOpenPositionSelect}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  role="combobox"
-                  aria-expanded={openPositionSelect}
-                  className="w-full justify-between mt-1"
-                >
-                  {player.position ? getPositionLabel(player.position) : t.selectPosition || "Select position..."}
-                  <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-full p-0">
-                <Command>
-                  <CommandInput placeholder={t.searchPosition || "Search position..."} />
-                  <CommandEmpty>{t.noPositionFound || "No position found."}</CommandEmpty>
-                  <CommandGroup>
-                    {positions.map((pos) => (
-                      <CommandItem
-                        key={pos.value}
-                        value={pos.value}
-                        onSelect={() => handlePositionSelect(pos.value)}
-                      >
-                        <Check
-                          className={cn(
-                            "mr-2 h-4 w-4",
-                            player.position === pos.value ? "opacity-100" : "opacity-0"
-                          )}
-                        />
-                        {pos.label}
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                </Command>
-              </PopoverContent>
-            </Popover>
+            <Select value={player.position} onValueChange={handlePositionSelect}>
+              <SelectTrigger className="mt-1">
+                <SelectValue placeholder={t.selectPosition || "Select position..."}>
+                  {player.position && (
+                    <div className="flex items-center gap-2">
+                      <span>{getPositionEmoji(player.position)}</span>
+                      <span>{getPositionLabel(player.position)}</span>
+                    </div>
+                  )}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectLabel>{t.position}</SelectLabel>
+                  {positions.map((pos) => (
+                    <SelectItem key={pos.value} value={pos.value}>
+                      <div className="flex items-center gap-2">
+                        <span>{pos.emoji}</span>
+                        <span>{pos.label}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
           </div>
           <div>
             <Label htmlFor="team" className="text-lg font-medium">{t.team}</Label>
