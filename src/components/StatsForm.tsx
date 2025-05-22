@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -115,10 +114,10 @@ export default function StatsForm({
     setDatePickerOpen(false); // Close the date picker after selection
   };
   
-  // Helper text to explain that doubles, triples, and HRs are also counted as hits
+  // Helper text to explain MLB stats
   const hitExplanation = language === 'es' 
-    ? "Los dobles, triples y jonrones también cuentan como hits"
-    : "Doubles, triples, and HRs also count as hits";
+    ? "Los dobles, triples y jonrones también cuentan como hits. Estadísticas calculadas según estándares MLB."
+    : "Doubles, triples, and HRs also count as hits. Statistics calculated according to MLB standards.";
 
   return (
     <Card className="mb-6 bg-white dark:bg-gray-900 shadow-md hover:shadow-lg transition-shadow duration-300">

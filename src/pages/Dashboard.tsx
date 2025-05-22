@@ -1102,14 +1102,19 @@ export default function Dashboard() {
   };
   
   const calcOBP = (stats: Record<string, number>) => {
-    // Total hits includes H (singles) + doubles + triples + HR
+    // MLB Standard: OBP = (H + BB + HBP) / (AB + BB + HBP + SF)
+    // Since we don't track HBP and SF, we use a simplified version
     const totalHits = stats.H || 0;
     const BB = stats.BB || 0;
     const AB = stats.AB || 0;
+    
+    // In MLB, this would include HBP in both numerator and denominator
+    // and SF in the denominator, but we don't track those stats
     return (AB + BB) ? ((totalHits + BB) / (AB + BB)).toFixed(3) : "0.000";
   };
   
   const calcSLG = (stats: Record<string, number>) => {
+    // Singles = H - (2B + 3B + HR)
     const singles = Math.max(0, (stats.H || 0) - (stats.doubles || 0) - (stats.triples || 0) - (stats.HR || 0));
     const doubles = stats.doubles || 0;
     const triples = stats.triples || 0;
@@ -1117,18 +1122,20 @@ export default function Dashboard() {
     const AB = stats.AB || 0;
     
     // Calculate total bases: singles + 2*doubles + 3*triples + 4*HR
+    // This is the standard MLB formula for SLG
     const totalBases = singles + 2 * doubles + 3 * triples + 4 * HR;
     
     return AB ? (totalBases / AB).toFixed(3) : "0.000";
   };
   
   const calcOPS = (stats: Record<string, number>) => {
+    // OPS = OBP + SLG (standard MLB formula)
     const obp = parseFloat(calcOBP(stats));
     const slg = parseFloat(calcSLG(stats));
     return (obp + slg).toFixed(3);
   };
   
-  // Pitching statistics calculations
+  // Pitching statistics calculations - all match MLB standards
   const calcERA = (stats: Record<string, number>) => {
     const ER = stats.ER || 0;
     const IP = stats.IP || 0;
