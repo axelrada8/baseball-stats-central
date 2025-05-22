@@ -114,11 +114,17 @@ export default function StatsForm({
     onDateChange(date);
     setDatePickerOpen(false); // Close the date picker after selection
   };
+  
+  // Helper text to explain that doubles, triples, and HRs are also counted as hits
+  const hitExplanation = language === 'es' 
+    ? "Los dobles, triples y jonrones también cuentan como hits"
+    : "Doubles, triples, and HRs also count as hits";
 
   return (
     <Card className="mb-6 bg-white dark:bg-gray-900 shadow-md hover:shadow-lg transition-shadow duration-300">
       <CardHeader className="pb-0">
         <CardTitle className="text-xl font-bold text-center">{t.stats}</CardTitle>
+        <p className="text-center text-sm text-muted-foreground mt-1">{hitExplanation}</p>
       </CardHeader>
       <CardContent className="p-6">
         <Tabs defaultValue="add" className="w-full mb-6">

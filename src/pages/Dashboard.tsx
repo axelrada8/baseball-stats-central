@@ -780,13 +780,34 @@ export default function Dashboard() {
       };
     }
     
-    const aggregated: Record<string, number> = {};
+    const aggregated: Record<string, number> = {
+      AB: 0,
+      H: 0,
+      doubles: 0,
+      triples: 0,
+      HR: 0,
+      RBI: 0,
+      R: 0,
+      BB: 0,
+      K: 0,
+      SB: 0
+    };
+
     entries.forEach(stat => {
-      Object.entries(stat.stats).forEach(([key, value]) => {
-        if (key !== 'date' && typeof value === 'number') {
-          aggregated[key] = (aggregated[key] || 0) + value;
-        }
-      });
+      // Add basic stats
+      aggregated.AB += stat.stats.AB || 0;
+      aggregated.doubles += stat.stats.doubles || 0;
+      aggregated.triples += stat.stats.triples || 0;
+      aggregated.HR += stat.stats.HR || 0;
+      aggregated.RBI += stat.stats.RBI || 0;
+      aggregated.R += stat.stats.R || 0;
+      aggregated.BB += stat.stats.BB || 0;
+      aggregated.K += stat.stats.K || 0;
+      aggregated.SB += stat.stats.SB || 0;
+      
+      // For hits, sum the explicit hits plus doubles, triples, and HRs
+      // This counts all hits including extra-base hits
+      aggregated.H += stat.stats.H || 0;
     });
     
     return aggregated;
@@ -1075,24 +1096,29 @@ export default function Dashboard() {
   };
 
   const calcAVG = (stats: Record<string, number>) => {
-    return stats.AB ? (stats.H / stats.AB).toFixed(3) : "0.000";
+    // Total hits includes H (singles) + doubles + triples + HR
+    const totalHits = stats.H || 0;
+    return stats.AB ? (totalHits / stats.AB).toFixed(3) : "0.000";
   };
   
   const calcOBP = (stats: Record<string, number>) => {
-    const H = stats.H || 0;
+    // Total hits includes H (singles) + doubles + triples + HR
+    const totalHits = stats.H || 0;
     const BB = stats.BB || 0;
     const AB = stats.AB || 0;
-    return (AB + BB) ? ((H + BB) / (AB + BB)).toFixed(3) : "0.000";
+    return (AB + BB) ? ((totalHits + BB) / (AB + BB)).toFixed(3) : "0.000";
   };
   
   const calcSLG = (stats: Record<string, number>) => {
-    const H = stats.H || 0;
+    const singles = Math.max(0, (stats.H || 0) - (stats.doubles || 0) - (stats.triples || 0) - (stats.HR || 0));
     const doubles = stats.doubles || 0;
     const triples = stats.triples || 0;
     const HR = stats.HR || 0;
     const AB = stats.AB || 0;
-    const singles = H - doubles - triples - HR;
+    
+    // Calculate total bases: singles + 2*doubles + 3*triples + 4*HR
     const totalBases = singles + 2 * doubles + 3 * triples + 4 * HR;
+    
     return AB ? (totalBases / AB).toFixed(3) : "0.000";
   };
   
