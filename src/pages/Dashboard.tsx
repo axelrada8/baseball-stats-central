@@ -135,6 +135,10 @@ const translations = {
       title: "K/BB",
       description: "Ratio de Ponches a Bases por Bola"
     },
+    baa: {
+      title: "BAA",
+      description: "Promedio de Bateo en Contra"
+    },
     k9: {
       title: "K/9",
       description: "Ponches por 9 Entradas"
@@ -241,6 +245,10 @@ const translations = {
     kbb: {
       title: "K/BB",
       description: "Strikeout to Walk Ratio"
+    },
+    baa: {
+      title: "BAA",
+      description: "Batting Average Against"
     },
     k9: {
       title: "K/9",
@@ -1050,7 +1058,7 @@ export default function Dashboard() {
       // Create another table for advanced stats
       const advancedPitchingStats = [
         [`${t.era.title}: ${calcERA(aggregatePitchingStats)}`, `${t.whip.title}: ${calcWHIP(aggregatePitchingStats)}`],
-        [`${t.kbb.title}: ${calcKBB(aggregatePitchingStats)}`, `${t.k9.title}: ${calcK9(aggregatePitchingStats)}`]
+        [`${t.kbb.title}: ${calcKBB(aggregatePitchingStats)}`, `${t.baa.title}: ${calcBAA(aggregatePitchingStats)}`]
       ];
       
       // Draw advanced stats in a table-like format
@@ -1155,10 +1163,14 @@ export default function Dashboard() {
     return BB ? (K / BB).toFixed(2) : K > 0 ? "∞" : "0.00";
   };
   
-  const calcK9 = (stats: Record<string, number>) => {
-    const K = stats.K || 0;
+  // Replace K/9 with Batting Average Against (BAA)
+  const calcBAA = (stats: Record<string, number>) => {
+    const H = stats.H || 0;
+    // MLB calculates BAA as H / (AB), but we don't track AB for pitchers
+    // Instead we can estimate AB as IP * 3 (approx. outs) plus hits
     const IP = stats.IP || 0;
-    return IP ? ((K * 9) / IP).toFixed(2) : "0.00";
+    const estimatedAB = (IP * 3) + H;
+    return estimatedAB ? (H / estimatedAB).toFixed(3) : "0.000";
   };
 
   return (
@@ -1304,9 +1316,9 @@ export default function Dashboard() {
                 <p className="text-sm text-muted-foreground mt-1">{t.kbb.description}</p>
               </div>
               <div className="stat-card bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900 dark:to-red-800 p-4 rounded-lg border shadow-sm text-center">
-                <h2 className="text-lg font-bold text-red-700 dark:text-red-300">{t.k9.title}</h2>
-                <p className="text-3xl font-semibold">{calcK9(aggregatePitchingStats)}</p>
-                <p className="text-sm text-muted-foreground mt-1">{t.k9.description}</p>
+                <h2 className="text-lg font-bold text-red-700 dark:text-red-300">{t.baa.title}</h2>
+                <p className="text-3xl font-semibold">{calcBAA(aggregatePitchingStats)}</p>
+                <p className="text-sm text-muted-foreground mt-1">{t.baa.description}</p>
               </div>
             </CardContent>
           </Card>
@@ -1475,8 +1487,8 @@ export default function Dashboard() {
                     <span className="font-medium ml-2">{calcKBB(allTimeAggregatePitchingStats)}</span>
                   </div>
                   <div className="stat-item">
-                    <span className="text-muted-foreground text-sm">{t.k9.title}:</span>
-                    <span className="font-medium ml-2">{calcK9(allTimeAggregatePitchingStats)}</span>
+                    <span className="text-muted-foreground text-sm">{t.baa.title}:</span>
+                    <span className="font-medium ml-2">{calcBAA(allTimeAggregatePitchingStats)}</span>
                   </div>
                 </div>
               </div>
