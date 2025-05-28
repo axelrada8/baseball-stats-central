@@ -44,6 +44,15 @@ export default function Register({ onRegister, onSwitchToLogin }: RegisterProps)
         return;
       }
 
+      if (password.length < 6) {
+        toast({
+          variant: "destructive",
+          title: "Error en el registro",
+          description: "La contraseña debe tener al menos 6 caracteres",
+        });
+        return;
+      }
+
       // Intentar registrar el usuario
       const registrationSuccess = authService.register({ name, email, password });
       
@@ -56,23 +65,40 @@ export default function Register({ onRegister, onSwitchToLogin }: RegisterProps)
         return;
       }
 
-      // Enviar email de bienvenida
-      const emailResult = await sendWelcomeEmail({ name, email });
-      
-      if (emailResult.success) {
-        toast({
-          title: "¡Registro exitoso!",
-          description: `Bienvenido, ${name}. Se ha enviado un email de bienvenida a tu correo.`,
-        });
-      } else {
+      console.log('Usuario registrado exitosamente, enviando email...');
+
+      // Intentar enviar email de bienvenida
+      try {
+        const emailResult = await sendWelcomeEmail({ name, email });
+        
+        if (emailResult.success) {
+          console.log('Email enviado exitosamente');
+          toast({
+            title: "¡Registro exitoso!",
+            description: `Bienvenido, ${name}. Se ha enviado un email de bienvenida a tu correo.`,
+          });
+        } else {
+          console.error('Error enviando email:', emailResult.error);
+          toast({
+            title: "Registro exitoso",
+            description: `Bienvenido, ${name}. Tu cuenta fue creada pero no se pudo enviar el email de bienvenida. Puedes continuar usando la aplicación.`,
+          });
+        }
+      } catch (emailError) {
+        console.error('Error crítico enviando email:', emailError);
         toast({
           title: "Registro exitoso",
-          description: `Bienvenido, ${name}. (No se pudo enviar el email de bienvenida)`,
+          description: `Bienvenido, ${name}. Tu cuenta fue creada correctamente.`,
         });
       }
 
       // Iniciar sesión automáticamente después del registro
-      localStorage.setItem("user", JSON.stringify({ name, email }));
+      const userSession = {
+        id: Date.now().toString(),
+        name,
+        email
+      };
+      localStorage.setItem("user", JSON.stringify(userSession));
       onRegister();
       
     } catch (error) {
@@ -123,9 +149,11 @@ export default function Register({ onRegister, onSwitchToLogin }: RegisterProps)
             <Input 
               id="password" 
               type="password" 
+              placeholder="Mínimo 6 caracteres"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
+              minLength={6}
             />
           </div>
           <div className="space-y-2">
@@ -133,6 +161,7 @@ export default function Register({ onRegister, onSwitchToLogin }: RegisterProps)
             <Input 
               id="confirmPassword" 
               type="password" 
+              placeholder="Confirma tu contraseña"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               required
