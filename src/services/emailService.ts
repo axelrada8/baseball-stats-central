@@ -46,7 +46,7 @@ export const sendWelcomeEmail = async (userData: { name: string; email: string }
     console.log('Text:', result.text);
     
     return { success: true, result };
-  } catch (error) => {
+  } catch (error) {
     console.error('=== ERROR DETALLADO ===');
     console.error('Tipo de error:', typeof error);
     console.error('Error completo:', error);
