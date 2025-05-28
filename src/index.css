@@ -46,42 +46,42 @@
   }
 
   .dark {
-    /* Truly black dark mode */
+    /* TRUE BLACK dark mode */
     --background: 0 0% 0%;
-    --foreground: 0 0% 98%;
+    --foreground: 0 0% 100%;
 
-    --card: 0 0% 3%;
-    --card-foreground: 0 0% 98%;
+    --card: 0 0% 0%;
+    --card-foreground: 0 0% 100%;
 
-    --popover: 0 0% 3%;
-    --popover-foreground: 0 0% 98%;
+    --popover: 0 0% 0%;
+    --popover-foreground: 0 0% 100%;
 
     --primary: 252 95% 85%;
-    --primary-foreground: 240 5.9% 10%;
+    --primary-foreground: 0 0% 0%;
 
     --secondary: 0 100% 60%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary-foreground: 0 0% 100%;
 
-    --muted: 0 0% 15%;
-    --muted-foreground: 240 5% 64.9%;
+    --muted: 0 0% 5%;
+    --muted-foreground: 0 0% 60%;
 
-    --accent: 0 0% 15%;
-    --accent-foreground: 0 0% 98%;
+    --accent: 0 0% 5%;
+    --accent-foreground: 0 0% 100%;
 
     --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 0 0% 20%;
-    --input: 0 0% 15%;
+    --border: 0 0% 10%;
+    --input: 0 0% 5%;
     --ring: 252 95% 85%;
     
-    --sidebar-background: 0 0% 5%;
-    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-background: 0 0% 0%;
+    --sidebar-foreground: 0 0% 100%;
     --sidebar-primary: 224.3 76.3% 48%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 0 0% 15%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 0 0% 15%;
+    --sidebar-accent: 0 0% 5%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 0 0% 10%;
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
 }
@@ -106,7 +106,7 @@
 .baseball-stadium-bg {
   background-image: 
     linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.6)),
-    url('/lovable-uploads/76158556-37e2-4e05-b7c6-3e5febc615cd.png');
+    url('/lovable-uploads/45de0d71-578b-4b6f-81f5-c020b8fd846f.png');
   background-size: cover;
   background-position: center;
   background-attachment: fixed;
@@ -119,8 +119,8 @@
 }
 
 .dark .player-photo {
-  border-color: rgba(80, 80, 110, 0.3);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.8);
 }
 
 .player-photo:hover {
@@ -144,14 +144,17 @@
 
 .dark .stat-card {
   backdrop-filter: blur(12px);
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.9);
+  background-color: rgba(0, 0, 0, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .dark input,
 .dark select,
 .dark textarea {
-  background-color: rgba(15, 15, 15, 0.9) !important;
-  border-color: rgba(80, 80, 110, 0.3) !important;
+  background-color: rgba(0, 0, 0, 0.9) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  color: white !important;
 }
 
 .dark button {
@@ -159,8 +162,8 @@
 }
 
 .dark .card {
-  background: linear-gradient(135deg, rgba(15, 15, 15, 0.95), rgba(5, 5, 5, 0.97));
-  border: 1px solid rgba(50, 50, 60, 0.2);
+  background: rgba(0, 0, 0, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 /* Calendar popper formatting */
@@ -211,14 +214,16 @@
 /* Ensure dialog content is visible */
 .dark .dialog-content,
 .dark [role="dialog"] {
-  background-color: rgb(15, 15, 15);
+  background-color: rgb(0, 0, 0);
   color: white;
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 /* Make sure alert dialog is properly styled in dark mode */
 .dark [role="alertdialog"] {
-  background-color: rgb(15, 15, 15);
+  background-color: rgb(0, 0, 0);
   color: white;
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 /* Calendar auto close support */
@@ -235,9 +240,9 @@
 
 /* Position selector dropdown styling */
 .dark .command-menu {
-  background-color: rgb(15, 15, 15);
+  background-color: rgb(0, 0, 0);
   color: white;
-  border-color: rgba(80, 80, 110, 0.3);
+  border-color: rgba(255, 255, 255, 0.1);
 }
 
 .dark [cmdk-item][aria-selected="true"] {
@@ -246,9 +251,19 @@
 
 /* Tab styling */
 .dark [role="tablist"] {
-  background-color: rgba(15, 15, 15, 0.8);
+  background-color: rgba(0, 0, 0, 0.8);
 }
 
 .dark [role="tab"][data-state="active"] {
-  background-color: rgba(50, 50, 60, 0.5);
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* PDF title styling */
+.pdf-title {
+  text-align: center;
+  font-size: 24px;
+  font-weight: bold;
+  margin-bottom: 20px;
+  padding: 10px;
+  border-bottom: 2px solid #333;
 }

@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
+import { authService } from "@/services/authService";
+import { sendWelcomeEmail } from "@/services/emailService";
 
 interface RegisterProps {
   onRegister: () => void;
@@ -19,14 +21,11 @@ export default function Register({ onRegister, onSwitchToLogin }: RegisterProps)
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     
-    // Simulación de registro
-    setTimeout(() => {
-      setIsLoading(false);
-      
+    try {
       if (password !== confirmPassword) {
         toast({
           variant: "destructive",
@@ -36,22 +35,56 @@ export default function Register({ onRegister, onSwitchToLogin }: RegisterProps)
         return;
       }
       
-      // En un escenario real, aquí enviaríamos los datos a la API
-      if (name && email && password) {
-        localStorage.setItem("user", JSON.stringify({ name, email }));
-        toast({
-          title: "¡Registro exitoso!",
-          description: `Bienvenido, ${name}`,
-        });
-        onRegister();
-      } else {
+      if (!name || !email || !password) {
         toast({
           variant: "destructive",
           title: "Error en el registro",
           description: "Por favor, complete todos los campos",
         });
+        return;
       }
-    }, 1000);
+
+      // Intentar registrar el usuario
+      const registrationSuccess = authService.register({ name, email, password });
+      
+      if (!registrationSuccess) {
+        toast({
+          variant: "destructive",
+          title: "Error en el registro",
+          description: "Este email ya está registrado",
+        });
+        return;
+      }
+
+      // Enviar email de bienvenida
+      const emailResult = await sendWelcomeEmail({ name, email });
+      
+      if (emailResult.success) {
+        toast({
+          title: "¡Registro exitoso!",
+          description: `Bienvenido, ${name}. Se ha enviado un email de bienvenida a tu correo.`,
+        });
+      } else {
+        toast({
+          title: "Registro exitoso",
+          description: `Bienvenido, ${name}. (No se pudo enviar el email de bienvenida)`,
+        });
+      }
+
+      // Iniciar sesión automáticamente después del registro
+      localStorage.setItem("user", JSON.stringify({ name, email }));
+      onRegister();
+      
+    } catch (error) {
+      console.error('Error en el registro:', error);
+      toast({
+        variant: "destructive",
+        title: "Error en el registro",
+        description: "Ocurrió un error inesperado. Inténtalo de nuevo.",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

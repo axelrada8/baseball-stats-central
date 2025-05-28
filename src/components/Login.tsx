@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
+import { authService } from "@/services/authService";
 
 interface LoginProps {
   onLogin: () => void;
@@ -21,24 +22,44 @@ export default function Login({ onLogin, onSwitchToRegister }: LoginProps) {
     e.preventDefault();
     setIsLoading(true);
     
-    // Simulación de login
     setTimeout(() => {
       setIsLoading(false);
       
-      // En un escenario real, aquí validaríamos con la API
-      if (email && password) {
-        localStorage.setItem("user", JSON.stringify({ email }));
-        toast({
-          title: "¡Inicio de sesión exitoso!",
-          description: `Bienvenido de nuevo, ${email}`,
-        });
-        onLogin();
-      } else {
+      if (!email || !password) {
         toast({
           variant: "destructive",
           title: "Error de inicio de sesión",
           description: "Por favor, complete todos los campos",
         });
+        return;
+      }
+
+      // Verificar si el usuario existe y las credenciales son correctas
+      const user = authService.login(email, password);
+      
+      if (user) {
+        toast({
+          title: "¡Inicio de sesión exitoso!",
+          description: `Bienvenido de nuevo, ${user.name}`,
+        });
+        onLogin();
+      } else {
+        // Verificar si el email está registrado para dar un mensaje más específico
+        const isRegistered = authService.isEmailRegistered(email);
+        
+        if (!isRegistered) {
+          toast({
+            variant: "destructive",
+            title: "Usuario no registrado",
+            description: "Este email no está registrado. Por favor, regístrate primero.",
+          });
+        } else {
+          toast({
+            variant: "destructive",
+            title: "Credenciales incorrectas",
+            description: "Email o contraseña incorrectos",
+          });
+        }
       }
     }, 1000);
   };
