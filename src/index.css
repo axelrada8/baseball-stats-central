@@ -46,7 +46,7 @@
   }
 
   .dark {
-    /* TRUE BLACK dark mode */
+    /* NEGRO VERDADERO para el modo oscuro */
     --background: 0 0% 0%;
     --foreground: 0 0% 100%;
 
@@ -56,33 +56,33 @@
     --popover: 0 0% 0%;
     --popover-foreground: 0 0% 100%;
 
-    --primary: 252 95% 85%;
+    --primary: 0 0% 90%;
     --primary-foreground: 0 0% 0%;
 
-    --secondary: 0 100% 60%;
+    --secondary: 0 0% 20%;
     --secondary-foreground: 0 0% 100%;
 
-    --muted: 0 0% 5%;
+    --muted: 0 0% 8%;
     --muted-foreground: 0 0% 60%;
 
-    --accent: 0 0% 5%;
+    --accent: 0 0% 10%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 62.8% 30.6%;
+    --destructive: 0 62.8% 50%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 0 0% 10%;
-    --input: 0 0% 5%;
-    --ring: 252 95% 85%;
+    --border: 0 0% 15%;
+    --input: 0 0% 8%;
+    --ring: 0 0% 90%;
     
     --sidebar-background: 0 0% 0%;
     --sidebar-foreground: 0 0% 100%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 0 0% 5%;
+    --sidebar-primary: 0 0% 90%;
+    --sidebar-primary-foreground: 0 0% 0%;
+    --sidebar-accent: 0 0% 10%;
     --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 0 0% 10%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-border: 0 0% 15%;
+    --sidebar-ring: 0 0% 90%;
   }
 }
 
@@ -136,24 +136,29 @@
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
 }
 
-/* True black dark mode styles */
+/* Modo oscuro completamente NEGRO */
 .dark {
   color-scheme: dark;
-  background-color: #000;
+  background-color: #000000 !important;
+}
+
+.dark body {
+  background-color: #000000 !important;
+  color: #ffffff !important;
 }
 
 .dark .stat-card {
   backdrop-filter: blur(12px);
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.9);
-  background-color: rgba(0, 0, 0, 0.8);
+  background-color: #000000 !important;
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .dark input,
 .dark select,
 .dark textarea {
-  background-color: rgba(0, 0, 0, 0.9) !important;
-  border-color: rgba(255, 255, 255, 0.1) !important;
+  background-color: #000000 !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
   color: white !important;
 }
 
@@ -162,8 +167,18 @@
 }
 
 .dark .card {
-  background: rgba(0, 0, 0, 0.95);
+  background: #000000 !important;
   border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Forzar negro en todos los elementos principales */
+.dark [data-sonner-toaster] {
+  background-color: #000000 !important;
+}
+
+.dark [data-sonner-toast] {
+  background-color: #000000 !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
 }
 
 /* Calendar popper formatting */
@@ -171,6 +186,11 @@
   --rdp-accent-color: hsl(var(--primary));
   --rdp-background-color: hsl(var(--primary) / 0.1);
   margin: 0;
+}
+
+.dark .rdp {
+  background-color: #000000 !important;
+  color: white !important;
 }
 
 .dark .rdp-day:hover:not([aria-disabled='true']) {
@@ -214,14 +234,14 @@
 /* Ensure dialog content is visible */
 .dark .dialog-content,
 .dark [role="dialog"] {
-  background-color: rgb(0, 0, 0);
+  background-color: #000000 !important;
   color: white;
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 /* Make sure alert dialog is properly styled in dark mode */
 .dark [role="alertdialog"] {
-  background-color: rgb(0, 0, 0);
+  background-color: #000000 !important;
   color: white;
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
@@ -240,7 +260,7 @@
 
 /* Position selector dropdown styling */
 .dark .command-menu {
-  background-color: rgb(0, 0, 0);
+  background-color: #000000 !important;
   color: white;
   border-color: rgba(255, 255, 255, 0.1);
 }
@@ -251,7 +271,7 @@
 
 /* Tab styling */
 .dark [role="tablist"] {
-  background-color: rgba(0, 0, 0, 0.8);
+  background-color: #000000 !important;
 }
 
 .dark [role="tab"][data-state="active"] {
@@ -266,4 +286,23 @@
   margin-bottom: 20px;
   padding: 10px;
   border-bottom: 2px solid #333;
+}
+
+/* Asegurar que todos los popover y dropdown sean negros */
+.dark [data-radix-popper-content-wrapper] {
+  background-color: #000000 !important;
+}
+
+.dark [role="listbox"] {
+  background-color: #000000 !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.dark [role="option"] {
+  background-color: #000000 !important;
+  color: white !important;
+}
+
+.dark [role="option"]:hover {
+  background-color: rgba(255, 255, 255, 0.1) !important;
 }

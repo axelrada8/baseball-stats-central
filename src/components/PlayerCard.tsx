@@ -1,4 +1,3 @@
-
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -99,24 +98,25 @@ export default function PlayerCard({ player, onPlayerChange, onPositionSelect, l
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const url = URL.createObjectURL(file);
-      
-      // Create an image element to check dimensions
-      const img = new Image();
-      img.onload = function() {
-        if (img.width < 500 || img.height < 500) {
-          alert(`${t.photoRecommendation}`);
-        }
-        URL.revokeObjectURL(img.src);
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const imageDataUrl = event.target?.result as string;
+        
+        // Create an image element to check dimensions
+        const img = new Image();
+        img.onload = function() {
+          if (img.width < 500 || img.height < 500) {
+            alert(`${t.photoRecommendation}`);
+          }
+        };
+        img.src = imageDataUrl;
+        
+        setTempPhoto(imageDataUrl);
+        setPosition({ x: 0, y: 0 });
+        setZoom(100);
+        setShowPhotoDialog(true);
       };
-      img.src = url;
-      
-      setTempPhoto(url);
-      setPosition({ x: 0, y: 0 });
-      setZoom(100);
-      setShowPhotoDialog(true); // Show dialog for adjustment
-    } else {
-      onPlayerChange(e);
+      reader.readAsDataURL(file);
     }
   };
 
@@ -125,6 +125,12 @@ export default function PlayerCard({ player, onPlayerChange, onPositionSelect, l
   };
 
   const applyPhotoChanges = () => {
+    // Guardar la foto en localStorage para persistencia
+    const playerKey = `player_${player.name || 'default'}_photo`;
+    if (tempPhoto) {
+      localStorage.setItem(playerKey, tempPhoto);
+    }
+    
     const photoEvent = {
       target: {
         name: "photo",
@@ -149,6 +155,22 @@ export default function PlayerCard({ player, onPlayerChange, onPositionSelect, l
     setZoom(100);
     setPosition({ x: 0, y: 0 });
   };
+
+  // Cargar foto guardada cuando el componente se monte
+  useEffect(() => {
+    const playerKey = `player_${player.name || 'default'}_photo`;
+    const savedPhoto = localStorage.getItem(playerKey);
+    if (savedPhoto && !player.photo) {
+      const photoEvent = {
+        target: {
+          name: "photo",
+          value: savedPhoto,
+          files: null
+        },
+      } as unknown as React.ChangeEvent<HTMLInputElement>;
+      onPlayerChange(photoEvent);
+    }
+  }, [player.name]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     if (!isAdjusting) return;
@@ -176,8 +198,7 @@ export default function PlayerCard({ player, onPlayerChange, onPositionSelect, l
   const handleMouseMove = (e: React.MouseEvent) => {
     if (!isDragging || !isAdjusting) return;
     
-    // Allow more movement based on zoom level
-    const maxOffset = zoom; // Scale the movement range with zoom
+    const maxOffset = zoom;
     const newX = Math.max(Math.min(e.clientX - dragStart.x, maxOffset), -maxOffset);
     const newY = Math.max(Math.min(e.clientY - dragStart.y, maxOffset), -maxOffset);
     
@@ -191,7 +212,7 @@ export default function PlayerCard({ player, onPlayerChange, onPositionSelect, l
     if (!isDragging || !isAdjusting) return;
     
     const touch = e.touches[0];
-    const maxOffset = zoom; // Scale the movement range with zoom
+    const maxOffset = zoom;
     const newX = Math.max(Math.min(touch.clientX - dragStart.x, maxOffset), -maxOffset);
     const newY = Math.max(Math.min(touch.clientY - dragStart.y, maxOffset), -maxOffset);
     
@@ -206,7 +227,6 @@ export default function PlayerCard({ player, onPlayerChange, onPositionSelect, l
   };
 
   useEffect(() => {
-    // Add global mouse up event listener to stop dragging even if mouse up outside component
     document.addEventListener('mouseup', handleMouseUp);
     document.addEventListener('touchend', handleMouseUp);
     
@@ -220,7 +240,6 @@ export default function PlayerCard({ player, onPlayerChange, onPositionSelect, l
     fileInputRef.current?.click();
   };
   
-  // Enable adjusting when dialog is shown
   useEffect(() => {
     if (showPhotoDialog) {
       setIsAdjusting(true);
@@ -242,7 +261,7 @@ export default function PlayerCard({ player, onPlayerChange, onPositionSelect, l
   };
 
   return (
-    <Card className="mb-6 bg-white dark:bg-gray-900 shadow-md hover:shadow-lg transition-shadow duration-300">
+    <Card className="mb-6 bg-white dark:bg-black shadow-md hover:shadow-lg transition-shadow duration-300">
       <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4 p-6">
         <div className="flex flex-col items-center justify-center">
           <Label className="mb-2 text-lg font-medium">{t.photo}</Label>

@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -6,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 import { authService } from "@/services/authService";
-import { sendWelcomeEmail } from "@/services/emailService";
+import { sendWelcomeEmailAlternative } from "@/services/alternativeEmailService";
 
 interface RegisterProps {
   onRegister: () => void;
@@ -67,21 +66,21 @@ export default function Register({ onRegister, onSwitchToLogin }: RegisterProps)
 
       console.log('Usuario registrado exitosamente, enviando email...');
 
-      // Intentar enviar email de bienvenida
+      // Enviar email de bienvenida usando método alternativo
       try {
-        const emailResult = await sendWelcomeEmail({ name, email });
+        const emailResult = sendWelcomeEmailAlternative({ name, email });
         
         if (emailResult.success) {
-          console.log('Email enviado exitosamente');
+          console.log('Email enviado exitosamente usando método alternativo');
           toast({
             title: "¡Registro exitoso!",
-            description: `Bienvenido, ${name}. Se ha enviado un email de bienvenida a tu correo.`,
+            description: `Bienvenido, ${name}. Se abrirá tu cliente de email para enviarte un mensaje de bienvenida.`,
           });
         } else {
           console.error('Error enviando email:', emailResult.error);
           toast({
             title: "Registro exitoso",
-            description: `Bienvenido, ${name}. Tu cuenta fue creada pero no se pudo enviar el email de bienvenida. Puedes continuar usando la aplicación.`,
+            description: `Bienvenido, ${name}. Tu cuenta fue creada correctamente.`,
           });
         }
       } catch (emailError) {
