@@ -1,15 +1,12 @@
+
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
-import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogClose, DialogFooter } from "@/components/ui/dialog";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
-import { Check, ChevronDown } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Dialog, DialogContent, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { 
   Select,
   SelectContent,
@@ -19,18 +16,9 @@ import {
   SelectGroup,
   SelectLabel
 } from "@/components/ui/select";
-
-interface PlayerData {
-  name: string;
-  position: string;
-  team: string;
-  photo: string | null;
-}
+import { useProfile } from "@/hooks/useProfile";
 
 interface PlayerCardProps {
-  player: PlayerData;
-  onPlayerChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onPositionSelect: (position: string) => void;
   language: "en" | "es";
   translations: {
     es: {
@@ -82,172 +70,51 @@ const positions = [
   { value: "UTIL", label: "Utility", emoji: "🔧" },
 ];
 
-export default function PlayerCard({ player, onPlayerChange, onPositionSelect, language, translations }: PlayerCardProps) {
+export default function PlayerCard({ language, translations }: PlayerCardProps) {
   const t = translations[language];
+  const { profile, loading, updateProfile, uploadPhoto } = useProfile();
   const [isAdjusting, setIsAdjusting] = useState(false);
   const [zoom, setZoom] = useState(100);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [tempPhoto, setTempPhoto] = useState<string | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [showPhotoDialog, setShowPhotoDialog] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const imageRef = useRef<HTMLDivElement>(null);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  if (loading) {
+    return (
+      <Card className="mb-6 bg-white dark:bg-gray-900 shadow-md">
+        <CardContent className="p-6 text-center">
+          <div className="text-lg">Cargando perfil...</div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const imageDataUrl = event.target?.result as string;
-        
-        // Create an image element to check dimensions
-        const img = new Image();
-        img.onload = function() {
-          if (img.width < 500 || img.height < 500) {
-            alert(`${t.photoRecommendation}`);
-          }
-        };
-        img.src = imageDataUrl;
-        
-        setTempPhoto(imageDataUrl);
-        setPosition({ x: 0, y: 0 });
-        setZoom(100);
-        setShowPhotoDialog(true);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
+    if (!file) return;
 
-  const handleZoomChange = (value: number[]) => {
-    setZoom(value[0]);
-  };
-
-  const applyPhotoChanges = () => {
-    // Guardar la foto en localStorage para persistencia
-    const playerKey = `player_${player.name || 'default'}_photo`;
-    if (tempPhoto) {
-      localStorage.setItem(playerKey, tempPhoto);
+    setIsUploading(true);
+    const photoUrl = await uploadPhoto(file);
+    
+    if (photoUrl) {
+      setTempPhoto(photoUrl);
+      setPosition({ x: 0, y: 0 });
+      setZoom(100);
+      setShowPhotoDialog(true);
     }
     
-    const photoEvent = {
-      target: {
-        name: "photo",
-        value: tempPhoto,
-        files: null,
-        dataset: {
-          position: JSON.stringify(position),
-          zoom: zoom.toString()
-        }
-      },
-    } as unknown as React.ChangeEvent<HTMLInputElement>;
-    
-    onPlayerChange(photoEvent);
-    setShowPhotoDialog(false);
-    setIsAdjusting(false);
+    setIsUploading(false);
   };
 
-  const cancelPhotoChanges = () => {
-    setShowPhotoDialog(false);
-    setIsAdjusting(false);
-    setTempPhoto(null);
-    setZoom(100);
-    setPosition({ x: 0, y: 0 });
+  const handleInputChange = (field: string, value: string) => {
+    updateProfile({ [field]: value });
   };
-
-  // Cargar foto guardada cuando el componente se monte
-  useEffect(() => {
-    const playerKey = `player_${player.name || 'default'}_photo`;
-    const savedPhoto = localStorage.getItem(playerKey);
-    if (savedPhoto && !player.photo) {
-      const photoEvent = {
-        target: {
-          name: "photo",
-          value: savedPhoto,
-          files: null
-        },
-      } as unknown as React.ChangeEvent<HTMLInputElement>;
-      onPlayerChange(photoEvent);
-    }
-  }, [player.name]);
-
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (!isAdjusting) return;
-    
-    e.preventDefault();
-    setIsDragging(true);
-    setDragStart({
-      x: e.clientX - position.x,
-      y: e.clientY - position.y
-    });
-  };
-
-  const handleTouchStart = (e: React.TouchEvent) => {
-    if (!isAdjusting) return;
-    
-    e.preventDefault();
-    const touch = e.touches[0];
-    setIsDragging(true);
-    setDragStart({
-      x: touch.clientX - position.x,
-      y: touch.clientY - position.y
-    });
-  };
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDragging || !isAdjusting) return;
-    
-    const maxOffset = zoom;
-    const newX = Math.max(Math.min(e.clientX - dragStart.x, maxOffset), -maxOffset);
-    const newY = Math.max(Math.min(e.clientY - dragStart.y, maxOffset), -maxOffset);
-    
-    setPosition({
-      x: newX,
-      y: newY
-    });
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (!isDragging || !isAdjusting) return;
-    
-    const touch = e.touches[0];
-    const maxOffset = zoom;
-    const newX = Math.max(Math.min(touch.clientX - dragStart.x, maxOffset), -maxOffset);
-    const newY = Math.max(Math.min(touch.clientY - dragStart.y, maxOffset), -maxOffset);
-    
-    setPosition({
-      x: newX,
-      y: newY
-    });
-  };
-
-  const handleMouseUp = () => {
-    setIsDragging(false);
-  };
-
-  useEffect(() => {
-    document.addEventListener('mouseup', handleMouseUp);
-    document.addEventListener('touchend', handleMouseUp);
-    
-    return () => {
-      document.removeEventListener('mouseup', handleMouseUp);
-      document.removeEventListener('touchend', handleMouseUp);
-    };
-  }, []);
-
-  const handleButtonClick = () => {
-    fileInputRef.current?.click();
-  };
-  
-  useEffect(() => {
-    if (showPhotoDialog) {
-      setIsAdjusting(true);
-    }
-  }, [showPhotoDialog]);
 
   const handlePositionSelect = (selectedPosition: string) => {
-    onPositionSelect(selectedPosition);
+    updateProfile({ position: selectedPosition });
   };
 
   const getPositionLabel = (value: string) => {
@@ -260,57 +127,69 @@ export default function PlayerCard({ player, onPlayerChange, onPositionSelect, l
     return position ? position.emoji : "";
   };
 
+  const applyPhotoChanges = () => {
+    setShowPhotoDialog(false);
+    setIsAdjusting(false);
+  };
+
+  const cancelPhotoChanges = () => {
+    setShowPhotoDialog(false);
+    setIsAdjusting(false);
+    setTempPhoto(null);
+    setZoom(100);
+    setPosition({ x: 0, y: 0 });
+  };
+
   return (
-    <Card className="mb-6 bg-white dark:bg-black shadow-md hover:shadow-lg transition-shadow duration-300">
+    <Card className="mb-6 bg-white dark:bg-gray-900 shadow-md hover:shadow-lg transition-shadow duration-300">
       <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4 p-6">
         <div className="flex flex-col items-center justify-center">
-          <Label className="mb-2 text-lg font-medium">{t.photo}</Label>
+          <Label className="mb-2 text-lg font-medium text-gray-900 dark:text-white">{t.photo}</Label>
           <div className="relative mb-4 w-40 h-40">
-            <div 
-              className="w-40 h-40 rounded-full overflow-hidden player-photo"
-              ref={imageRef}
-            >
+            <div className="w-40 h-40 rounded-full overflow-hidden">
               <Avatar className="w-full h-full">
-                <AvatarImage src={player.photo || ''} alt={player.name} />
-                <AvatarFallback className="bg-primary/20 text-primary">
-                  {player.name ? player.name.charAt(0).toUpperCase() : 'J'}
+                <AvatarImage src={profile?.photo_url || ''} alt={profile?.name || 'Usuario'} />
+                <AvatarFallback className="bg-green-100 dark:bg-green-900 text-green-600 dark:text-green-300">
+                  {profile?.name ? profile.name.charAt(0).toUpperCase() : 'U'}
                 </AvatarFallback>
               </Avatar>
             </div>
             <div className="absolute -bottom-2 -right-2">
-              <div className="relative overflow-hidden bg-primary hover:bg-primary/80 text-white p-2 rounded-full cursor-pointer transition-colors">
-                <Input 
-                  ref={fileInputRef}
-                  type="file" 
-                  name="photo" 
-                  accept="image/*" 
-                  onChange={handleFileChange} 
-                  className="absolute inset-0 opacity-0 cursor-pointer"
-                />
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-camera">
-                  <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" />
-                  <circle cx="12" cy="13" r="3" />
-                </svg>
-              </div>
+              <Button
+                variant="default"
+                size="sm"
+                className="rounded-full p-2 bg-green-600 hover:bg-green-700 text-white"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploading}
+              >
+                {isUploading ? (
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" />
+                    <circle cx="12" cy="13" r="3" />
+                  </svg>
+                )}
+              </Button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleFileChange}
+                className="hidden"
+              />
             </div>
           </div>
           
-          <p className="text-xs text-muted-foreground mt-1 text-center">
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 text-center">
             {t.photoRecommendation}
           </p>
           
           <Dialog open={showPhotoDialog} onOpenChange={setShowPhotoDialog}>
             <DialogContent className="sm:max-w-md">
-              <DialogTitle>{t.adjustPhoto}</DialogTitle>
+              <DialogTitle className="text-gray-900 dark:text-white">{t.adjustPhoto}</DialogTitle>
               <div className="flex flex-col items-center justify-center">
-                <div 
-                  className="w-64 h-64 rounded-full overflow-hidden player-photo photo-container"
-                  onMouseDown={handleMouseDown}
-                  onTouchStart={handleTouchStart}
-                  onMouseMove={handleMouseMove}
-                  onTouchMove={handleTouchMove}
-                  style={{ cursor: 'move' }}
-                >
+                <div className="w-64 h-64 rounded-full overflow-hidden" style={{ cursor: 'move' }}>
                   {tempPhoto && (
                     <div className="w-full h-full overflow-hidden">
                       <img 
@@ -328,7 +207,7 @@ export default function PlayerCard({ player, onPlayerChange, onPositionSelect, l
                 
                 <div className="w-full max-w-xs mt-6 space-y-4">
                   <div>
-                    <Label htmlFor="zoom-slider" className="text-sm font-medium">
+                    <Label htmlFor="zoom-slider" className="text-sm font-medium text-gray-900 dark:text-white">
                       {t.zoom}: {zoom}%
                     </Label>
                     <Slider
@@ -337,52 +216,52 @@ export default function PlayerCard({ player, onPlayerChange, onPositionSelect, l
                       max={300}
                       step={5}
                       value={[zoom]}
-                      onValueChange={handleZoomChange}
+                      onValueChange={(value) => setZoom(value[0])}
                       className="mt-2"
                     />
                   </div>
-                  <p className="text-xs text-center text-muted-foreground">
+                  <p className="text-xs text-center text-gray-500 dark:text-gray-400">
                     {t.movePhoto}
                   </p>
                 </div>
               </div>
               <DialogFooter className="flex justify-between gap-2 mt-4">
                 <Button variant="outline" onClick={cancelPhotoChanges}>{t.cancel}</Button>
-                <Button onClick={applyPhotoChanges}>{t.apply}</Button>
+                <Button onClick={applyPhotoChanges} className="bg-green-600 hover:bg-green-700 text-white">{t.apply}</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
         </div>
+        
         <div className="grid gap-4">
           <div>
-            <Label htmlFor="name" className="text-lg font-medium">{t.name}</Label>
+            <Label htmlFor="name" className="text-lg font-medium text-gray-900 dark:text-white">{t.name}</Label>
             <Input 
               id="name"
-              name="name" 
-              value={player.name} 
-              onChange={onPlayerChange} 
-              className="mt-1"
+              value={profile?.name || ''} 
+              onChange={(e) => handleInputChange('name', e.target.value)}
+              className="mt-1 bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white"
               placeholder={t.name}
             />
           </div>
           <div>
-            <Label htmlFor="position" className="text-lg font-medium">{t.position}</Label>
-            <Select value={player.position} onValueChange={handlePositionSelect}>
-              <SelectTrigger className="mt-1">
+            <Label htmlFor="position" className="text-lg font-medium text-gray-900 dark:text-white">{t.position}</Label>
+            <Select value={profile?.position || ''} onValueChange={handlePositionSelect}>
+              <SelectTrigger className="mt-1 bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white">
                 <SelectValue placeholder={t.selectPosition || "Select position..."}>
-                  {player.position && (
+                  {profile?.position && (
                     <div className="flex items-center gap-2">
-                      <span>{getPositionEmoji(player.position)}</span>
-                      <span>{getPositionLabel(player.position)}</span>
+                      <span>{getPositionEmoji(profile.position)}</span>
+                      <span>{getPositionLabel(profile.position)}</span>
                     </div>
                   )}
                 </SelectValue>
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600">
                 <SelectGroup>
-                  <SelectLabel>{t.position}</SelectLabel>
+                  <SelectLabel className="text-gray-900 dark:text-white">{t.position}</SelectLabel>
                   {positions.map((pos) => (
-                    <SelectItem key={pos.value} value={pos.value}>
+                    <SelectItem key={pos.value} value={pos.value} className="text-gray-900 dark:text-white">
                       <div className="flex items-center gap-2">
                         <span>{pos.emoji}</span>
                         <span>{pos.label}</span>
@@ -394,13 +273,12 @@ export default function PlayerCard({ player, onPlayerChange, onPositionSelect, l
             </Select>
           </div>
           <div>
-            <Label htmlFor="team" className="text-lg font-medium">{t.team}</Label>
+            <Label htmlFor="team" className="text-lg font-medium text-gray-900 dark:text-white">{t.team}</Label>
             <Input 
               id="team"
-              name="team" 
-              value={player.team} 
-              onChange={onPlayerChange} 
-              className="mt-1"
+              value={profile?.team || ''} 
+              onChange={(e) => handleInputChange('team', e.target.value)}
+              className="mt-1 bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white"
               placeholder={t.team}
             />
           </div>

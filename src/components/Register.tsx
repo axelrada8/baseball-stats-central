@@ -1,11 +1,11 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
-import { authService } from "@/services/authService";
-import { sendWelcomeEmailAlternative } from "@/services/alternativeEmailService";
+import { useAuth } from "@/hooks/useAuth";
 
 interface RegisterProps {
   onRegister: () => void;
@@ -19,6 +19,7 @@ export default function Register({ onRegister, onSwitchToLogin }: RegisterProps)
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const { signUp } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,52 +53,24 @@ export default function Register({ onRegister, onSwitchToLogin }: RegisterProps)
         return;
       }
 
-      // Intentar registrar el usuario
-      const registrationSuccess = authService.register({ name, email, password });
+      const { error } = await signUp(email, password, name);
       
-      if (!registrationSuccess) {
+      if (error) {
         toast({
           variant: "destructive",
           title: "Error en el registro",
-          description: "Este email ya está registrado",
+          description: error.message.includes("already registered") 
+            ? "Este email ya está registrado" 
+            : "Error al crear la cuenta",
         });
         return;
       }
 
-      console.log('Usuario registrado exitosamente, enviando email...');
+      toast({
+        title: "¡Registro exitoso!",
+        description: `Bienvenido, ${name}. Tu cuenta fue creada correctamente.`,
+      });
 
-      // Enviar email de bienvenida usando método alternativo
-      try {
-        const emailResult = sendWelcomeEmailAlternative({ name, email });
-        
-        if (emailResult.success) {
-          console.log('Email enviado exitosamente usando método alternativo');
-          toast({
-            title: "¡Registro exitoso!",
-            description: `Bienvenido, ${name}. Se abrirá tu cliente de email para enviarte un mensaje de bienvenida.`,
-          });
-        } else {
-          console.error('Error enviando email:', emailResult.error);
-          toast({
-            title: "Registro exitoso",
-            description: `Bienvenido, ${name}. Tu cuenta fue creada correctamente.`,
-          });
-        }
-      } catch (emailError) {
-        console.error('Error crítico enviando email:', emailError);
-        toast({
-          title: "Registro exitoso",
-          description: `Bienvenido, ${name}. Tu cuenta fue creada correctamente.`,
-        });
-      }
-
-      // Iniciar sesión automáticamente después del registro
-      const userSession = {
-        id: Date.now().toString(),
-        name,
-        email
-      };
-      localStorage.setItem("user", JSON.stringify(userSession));
       onRegister();
       
     } catch (error) {
@@ -113,27 +86,28 @@ export default function Register({ onRegister, onSwitchToLogin }: RegisterProps)
   };
 
   return (
-    <Card className="w-full max-w-md mx-auto shadow-lg">
+    <Card className="w-full max-w-md mx-auto shadow-lg bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm">
       <CardHeader className="space-y-1">
-        <CardTitle className="text-2xl font-bold text-center">Crear una cuenta</CardTitle>
-        <CardDescription className="text-center">
+        <CardTitle className="text-2xl font-bold text-center text-gray-900 dark:text-white">Crear una cuenta</CardTitle>
+        <CardDescription className="text-center text-gray-600 dark:text-gray-300">
           Regístrate para comenzar a registrar tus estadísticas
         </CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="name">Nombre completo</Label>
+            <Label htmlFor="name" className="text-gray-700 dark:text-gray-300">Nombre completo</Label>
             <Input 
               id="name" 
               placeholder="Tu nombre" 
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
+              className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white"
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="email">Correo Electrónico</Label>
+            <Label htmlFor="email" className="text-gray-700 dark:text-gray-300">Correo Electrónico</Label>
             <Input 
               id="email" 
               type="email" 
@@ -141,10 +115,11 @@ export default function Register({ onRegister, onSwitchToLogin }: RegisterProps)
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
+              className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white"
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="password">Contraseña</Label>
+            <Label htmlFor="password" className="text-gray-700 dark:text-gray-300">Contraseña</Label>
             <Input 
               id="password" 
               type="password" 
@@ -153,10 +128,11 @@ export default function Register({ onRegister, onSwitchToLogin }: RegisterProps)
               onChange={(e) => setPassword(e.target.value)}
               required
               minLength={6}
+              className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white"
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="confirmPassword">Confirmar Contraseña</Label>
+            <Label htmlFor="confirmPassword" className="text-gray-700 dark:text-gray-300">Confirmar Contraseña</Label>
             <Input 
               id="confirmPassword" 
               type="password" 
@@ -164,15 +140,16 @@ export default function Register({ onRegister, onSwitchToLogin }: RegisterProps)
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               required
+              className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white"
             />
           </div>
-          <Button type="submit" className="w-full" disabled={isLoading}>
+          <Button type="submit" className="w-full bg-green-600 hover:bg-green-700 text-white" disabled={isLoading}>
             {isLoading ? "Registrando..." : "Registrarse"}
           </Button>
         </form>
       </CardContent>
       <CardFooter className="flex justify-center">
-        <Button variant="link" onClick={onSwitchToLogin}>
+        <Button variant="link" onClick={onSwitchToLogin} className="text-green-600 hover:text-green-700">
           ¿Ya tienes cuenta? Inicia sesión
         </Button>
       </CardFooter>

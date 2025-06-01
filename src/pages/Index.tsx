@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Instagram, Mail } from "lucide-react";
 import Login from "@/components/Login";
@@ -8,14 +8,6 @@ import Register from "@/components/Register";
 const Index = () => {
   const [showLogin, setShowLogin] = useState(true);
   const navigate = useNavigate();
-
-  useEffect(() => {
-    // Comprobar si el usuario ya está autenticado
-    const user = localStorage.getItem("user");
-    if (user) {
-      navigate("/dashboard");
-    }
-  }, [navigate]);
 
   const handleLogin = () => {
     navigate("/dashboard");

@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
-import { authService } from "@/services/authService";
+import { useAuth } from "@/hooks/useAuth";
 
 interface LoginProps {
   onLogin: () => void;
@@ -17,65 +17,55 @@ export default function Login({ onLogin, onSwitchToRegister }: LoginProps) {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const { signIn } = useAuth();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     
-    setTimeout(() => {
+    if (!email || !password) {
+      toast({
+        variant: "destructive",
+        title: "Error de inicio de sesión",
+        description: "Por favor, complete todos los campos",
+      });
       setIsLoading(false);
-      
-      if (!email || !password) {
-        toast({
-          variant: "destructive",
-          title: "Error de inicio de sesión",
-          description: "Por favor, complete todos los campos",
-        });
-        return;
-      }
+      return;
+    }
 
-      // Verificar si el usuario existe y las credenciales son correctas
-      const user = authService.login(email, password);
-      
-      if (user) {
-        toast({
-          title: "¡Inicio de sesión exitoso!",
-          description: `Bienvenido de nuevo, ${user.name}`,
-        });
-        onLogin();
-      } else {
-        // Verificar si el email está registrado para dar un mensaje más específico
-        const isRegistered = authService.isEmailRegistered(email);
-        
-        if (!isRegistered) {
-          toast({
-            variant: "destructive",
-            title: "Usuario no registrado",
-            description: "Este email no está registrado. Por favor, regístrate primero.",
-          });
-        } else {
-          toast({
-            variant: "destructive",
-            title: "Credenciales incorrectas",
-            description: "Email o contraseña incorrectos",
-          });
-        }
-      }
-    }, 1000);
+    const { error } = await signIn(email, password);
+    
+    if (error) {
+      toast({
+        variant: "destructive",
+        title: "Error de inicio de sesión",
+        description: error.message === "Invalid login credentials" 
+          ? "Credenciales incorrectas" 
+          : "Error al iniciar sesión",
+      });
+    } else {
+      toast({
+        title: "¡Inicio de sesión exitoso!",
+        description: "Bienvenido de nuevo",
+      });
+      onLogin();
+    }
+    
+    setIsLoading(false);
   };
 
   return (
-    <Card className="w-full max-w-md mx-auto shadow-lg">
+    <Card className="w-full max-w-md mx-auto shadow-lg bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm">
       <CardHeader className="space-y-1">
-        <CardTitle className="text-2xl font-bold text-center">Iniciar Sesión</CardTitle>
-        <CardDescription className="text-center">
+        <CardTitle className="text-2xl font-bold text-center text-gray-900 dark:text-white">Iniciar Sesión</CardTitle>
+        <CardDescription className="text-center text-gray-600 dark:text-gray-300">
           Ingresa tus credenciales para acceder a tus estadísticas
         </CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="email">Correo Electrónico</Label>
+            <Label htmlFor="email" className="text-gray-700 dark:text-gray-300">Correo Electrónico</Label>
             <Input 
               id="email" 
               type="email" 
@@ -83,25 +73,27 @@ export default function Login({ onLogin, onSwitchToRegister }: LoginProps) {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
+              className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white"
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="password">Contraseña</Label>
+            <Label htmlFor="password" className="text-gray-700 dark:text-gray-300">Contraseña</Label>
             <Input 
               id="password" 
               type="password" 
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
+              className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white"
             />
           </div>
-          <Button type="submit" className="w-full" disabled={isLoading}>
+          <Button type="submit" className="w-full bg-green-600 hover:bg-green-700 text-white" disabled={isLoading}>
             {isLoading ? "Iniciando sesión..." : "Iniciar Sesión"}
           </Button>
         </form>
       </CardContent>
       <CardFooter className="flex justify-center">
-        <Button variant="link" onClick={onSwitchToRegister}>
+        <Button variant="link" onClick={onSwitchToRegister} className="text-green-600 hover:text-green-700">
           ¿No tienes cuenta? Regístrate
         </Button>
       </CardFooter>
