@@ -363,12 +363,6 @@ export default function Dashboard() {
       setLanguage(savedLanguage);
     }
 
-    // Cargar datos del usuario del localStorage
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
-
     // Cargar datos del jugador del localStorage
     const storedPlayer = localStorage.getItem("playerStats");
     if (storedPlayer) {
