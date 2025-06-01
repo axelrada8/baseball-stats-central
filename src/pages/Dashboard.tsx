@@ -20,6 +20,7 @@ import { es } from "date-fns/locale";
 import PlayerCard from "@/components/PlayerCard";
 import StatsForm from "@/components/StatsForm";
 import PitchingStatsForm from "@/components/PitchingStatsForm";
+import { useAuth } from "@/hooks/useAuth";
 
 interface PlayerStats {
   name: string;
@@ -284,6 +285,7 @@ const translations = {
 };
 
 export default function Dashboard() {
+  const { user, signOut } = useAuth();
   const [player, setPlayer] = useState<PlayerStats>({
     name: "",
     position: "",
@@ -321,7 +323,6 @@ export default function Dashboard() {
   });
   
   const { toast } = useToast();
-  const [user, setUser] = useState<{ name?: string; email: string } | null>(null);
   const [darkMode, setDarkMode] = useState<boolean>(false);
   const [language, setLanguage] = useState<"es" | "en">("es");
   const [showTotalsDialog, setShowTotalsDialog] = useState<boolean>(false);
@@ -393,23 +394,8 @@ export default function Dashboard() {
     }
   }, []);
 
-  const handleLogout = () => {
-    localStorage.removeItem("user");
-    window.location.reload();
-  };
-
-  const handlePlayerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value, files } = e.target;
-    if (name === "photo" && files && files.length > 0) {
-      setPlayer({ ...player, photo: URL.createObjectURL(files[0]) });
-      setDataModified(true);
-    } else if (name === "photo" && value) { // For our custom photo handler
-      setPlayer({ ...player, photo: value });
-      setDataModified(true);
-    } else {
-      setPlayer({ ...player, [name]: value });
-      setDataModified(true);
-    }
+  const handleLogout = async () => {
+    await signOut();
   };
 
   const handlePositionSelect = (position: string) => {
@@ -1196,7 +1182,7 @@ export default function Dashboard() {
           </div>
 
           <p className="text-muted-foreground ml-4">
-            {t.greeting}, <span className="font-medium">{user?.name || user?.email}</span>
+            {t.greeting}, <span className="font-medium">{user?.email}</span>
           </p>
           <Button variant="outline" onClick={handleLogout}>
             {t.logout}
@@ -1205,9 +1191,6 @@ export default function Dashboard() {
       </header>
 
       <PlayerCard 
-        player={player} 
-        onPlayerChange={handlePlayerChange} 
-        onPositionSelect={handlePositionSelect}
         language={language} 
         translations={translations} 
       />
