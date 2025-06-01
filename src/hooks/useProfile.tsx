@@ -135,12 +135,7 @@ export function useProfile() {
         .from('profile-photos')
         .getPublicUrl(fileName);
 
-      const photoUrl = data.publicUrl;
-
-      // Actualizar perfil con nueva URL
-      await updateProfile({ photo_url: photoUrl });
-
-      return photoUrl;
+      return data.publicUrl;
     } catch (error) {
       console.error('Error uploading photo:', error);
       toast({
@@ -152,11 +147,43 @@ export function useProfile() {
     }
   };
 
+  const deletePhoto = async () => {
+    if (!user || !profile?.photo_url) return false;
+
+    try {
+      // Extraer el path del archivo de la URL
+      const fileName = `${user.id}/profile.jpg`; // Asumimos extensión jpg por defecto
+      
+      // Eliminar archivo de Supabase Storage
+      const { error: deleteError } = await supabase.storage
+        .from('profile-photos')
+        .remove([fileName]);
+
+      if (deleteError) {
+        console.error('Error deleting photo from storage:', deleteError);
+      }
+
+      // Actualizar perfil para remover la URL de la foto
+      await updateProfile({ photo_url: null });
+      
+      return true;
+    } catch (error) {
+      console.error('Error deleting photo:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "No se pudo eliminar la foto",
+      });
+      return false;
+    }
+  };
+
   return {
     profile,
     loading,
     updateProfile,
     uploadPhoto,
+    deletePhoto,
     refetch: fetchProfile
   };
 }

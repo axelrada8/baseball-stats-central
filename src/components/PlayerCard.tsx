@@ -17,6 +17,7 @@ import {
   SelectLabel
 } from "@/components/ui/select";
 import { useProfile } from "@/hooks/useProfile";
+import { Trash } from "lucide-react";
 
 interface PlayerCardProps {
   language: "en" | "es";
@@ -72,11 +73,11 @@ const positions = [
 
 export default function PlayerCard({ language, translations }: PlayerCardProps) {
   const t = translations[language];
-  const { profile, loading, updateProfile, uploadPhoto } = useProfile();
-  const [isAdjusting, setIsAdjusting] = useState(false);
+  const { profile, loading, updateProfile, uploadPhoto, deletePhoto } = useProfile();
   const [zoom, setZoom] = useState(100);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [tempPhoto, setTempPhoto] = useState<string | null>(null);
+  const [tempFile, setTempFile] = useState<File | null>(null);
   const [showPhotoDialog, setShowPhotoDialog] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   
@@ -96,17 +97,13 @@ export default function PlayerCard({ language, translations }: PlayerCardProps) 
     const file = e.target.files?.[0];
     if (!file) return;
 
-    setIsUploading(true);
-    const photoUrl = await uploadPhoto(file);
-    
-    if (photoUrl) {
-      setTempPhoto(photoUrl);
-      setPosition({ x: 0, y: 0 });
-      setZoom(100);
-      setShowPhotoDialog(true);
-    }
-    
-    setIsUploading(false);
+    // Crear URL temporal para previsualización
+    const tempUrl = URL.createObjectURL(file);
+    setTempPhoto(tempUrl);
+    setTempFile(file);
+    setPosition({ x: 0, y: 0 });
+    setZoom(100);
+    setShowPhotoDialog(true);
   };
 
   const handleInputChange = (field: string, value: string) => {
@@ -127,33 +124,74 @@ export default function PlayerCard({ language, translations }: PlayerCardProps) 
     return position ? position.emoji : "";
   };
 
-  const applyPhotoChanges = () => {
-    setShowPhotoDialog(false);
-    setIsAdjusting(false);
+  const applyPhotoChanges = async () => {
+    if (!tempFile) return;
+
+    setIsUploading(true);
+    
+    try {
+      const photoUrl = await uploadPhoto(tempFile);
+      
+      if (photoUrl) {
+        await updateProfile({ photo_url: photoUrl });
+      }
+    } catch (error) {
+      console.error('Error applying photo changes:', error);
+    } finally {
+      setIsUploading(false);
+      setShowPhotoDialog(false);
+      setTempPhoto(null);
+      setTempFile(null);
+      setZoom(100);
+      setPosition({ x: 0, y: 0 });
+      
+      // Limpiar el input file
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
   };
 
   const cancelPhotoChanges = () => {
     setShowPhotoDialog(false);
-    setIsAdjusting(false);
     setTempPhoto(null);
+    setTempFile(null);
     setZoom(100);
     setPosition({ x: 0, y: 0 });
+    
+    // Limpiar el input file
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleDeletePhoto = async () => {
+    const success = await deletePhoto();
+    if (success && fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   return (
-    <Card className="mb-6 bg-white dark:bg-gray-900 shadow-md hover:shadow-lg transition-shadow duration-300">
+    <Card className="mb-6 bg-white dark:bg-black shadow-md hover:shadow-lg transition-shadow duration-300">
       <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4 p-6">
         <div className="flex flex-col items-center justify-center">
           <Label className="mb-2 text-lg font-medium text-gray-900 dark:text-white">{t.photo}</Label>
           <div className="relative mb-4 w-40 h-40">
             <div className="w-40 h-40 rounded-full overflow-hidden">
               <Avatar className="w-full h-full">
-                <AvatarImage src={profile?.photo_url || ''} alt={profile?.name || 'Usuario'} />
+                <AvatarImage 
+                  src={profile?.photo_url || ''} 
+                  alt={profile?.name || 'Usuario'}
+                  className="object-cover w-full h-full aspect-square"
+                />
                 <AvatarFallback className="bg-green-100 dark:bg-green-900 text-green-600 dark:text-green-300">
                   {profile?.name ? profile.name.charAt(0).toUpperCase() : 'U'}
                 </AvatarFallback>
               </Avatar>
             </div>
+            
+            {/* Botón de cámara para subir/cambiar foto */}
             <div className="absolute -bottom-2 -right-2">
               <Button
                 variant="default"
@@ -171,14 +209,30 @@ export default function PlayerCard({ language, translations }: PlayerCardProps) 
                   </svg>
                 )}
               </Button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleFileChange}
-                className="hidden"
-              />
             </div>
+
+            {/* Botón de eliminar foto (solo si hay foto) */}
+            {profile?.photo_url && (
+              <div className="absolute -bottom-2 -left-2">
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  className="rounded-full p-2"
+                  onClick={handleDeletePhoto}
+                  disabled={isUploading}
+                >
+                  <Trash size={16} />
+                </Button>
+              </div>
+            )}
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleFileChange}
+              className="hidden"
+            />
           </div>
           
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 text-center">
@@ -186,10 +240,10 @@ export default function PlayerCard({ language, translations }: PlayerCardProps) 
           </p>
           
           <Dialog open={showPhotoDialog} onOpenChange={setShowPhotoDialog}>
-            <DialogContent className="sm:max-w-md">
+            <DialogContent className="sm:max-w-md bg-white dark:bg-black">
               <DialogTitle className="text-gray-900 dark:text-white">{t.adjustPhoto}</DialogTitle>
               <div className="flex flex-col items-center justify-center">
-                <div className="w-64 h-64 rounded-full overflow-hidden" style={{ cursor: 'move' }}>
+                <div className="w-64 h-64 rounded-full overflow-hidden border-2 border-gray-200 dark:border-gray-700">
                   {tempPhoto && (
                     <div className="w-full h-full overflow-hidden">
                       <img 
@@ -227,7 +281,13 @@ export default function PlayerCard({ language, translations }: PlayerCardProps) 
               </div>
               <DialogFooter className="flex justify-between gap-2 mt-4">
                 <Button variant="outline" onClick={cancelPhotoChanges}>{t.cancel}</Button>
-                <Button onClick={applyPhotoChanges} className="bg-green-600 hover:bg-green-700 text-white">{t.apply}</Button>
+                <Button 
+                  onClick={applyPhotoChanges} 
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                  disabled={isUploading}
+                >
+                  {isUploading ? 'Guardando...' : t.apply}
+                </Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -240,14 +300,14 @@ export default function PlayerCard({ language, translations }: PlayerCardProps) 
               id="name"
               value={profile?.name || ''} 
               onChange={(e) => handleInputChange('name', e.target.value)}
-              className="mt-1 bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white"
+              className="mt-1 bg-white dark:bg-black border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white"
               placeholder={t.name}
             />
           </div>
           <div>
             <Label htmlFor="position" className="text-lg font-medium text-gray-900 dark:text-white">{t.position}</Label>
             <Select value={profile?.position || ''} onValueChange={handlePositionSelect}>
-              <SelectTrigger className="mt-1 bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white">
+              <SelectTrigger className="mt-1 bg-white dark:bg-black border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white">
                 <SelectValue placeholder={t.selectPosition || "Select position..."}>
                   {profile?.position && (
                     <div className="flex items-center gap-2">
@@ -257,7 +317,7 @@ export default function PlayerCard({ language, translations }: PlayerCardProps) 
                   )}
                 </SelectValue>
               </SelectTrigger>
-              <SelectContent className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600">
+              <SelectContent className="bg-white dark:bg-black border-gray-300 dark:border-gray-600">
                 <SelectGroup>
                   <SelectLabel className="text-gray-900 dark:text-white">{t.position}</SelectLabel>
                   {positions.map((pos) => (
@@ -278,7 +338,7 @@ export default function PlayerCard({ language, translations }: PlayerCardProps) 
               id="team"
               value={profile?.team || ''} 
               onChange={(e) => handleInputChange('team', e.target.value)}
-              className="mt-1 bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white"
+              className="mt-1 bg-white dark:bg-black border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white"
               placeholder={t.team}
             />
           </div>
