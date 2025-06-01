@@ -112,6 +112,14 @@ export function useProfile() {
     if (!user) return null;
 
     try {
+      // Eliminar foto anterior si existe
+      if (profile?.photo_url) {
+        const oldFileName = `${user.id}/profile.${profile.photo_url.split('.').pop()}`;
+        await supabase.storage
+          .from('profile-photos')
+          .remove([oldFileName]);
+      }
+
       // Crear nombre único para el archivo
       const fileExt = file.name.split('.').pop();
       const fileName = `${user.id}/profile.${fileExt}`;
@@ -152,11 +160,43 @@ export function useProfile() {
     }
   };
 
+  const removePhoto = async () => {
+    if (!user || !profile?.photo_url) return;
+
+    try {
+      // Eliminar foto del storage
+      const fileName = `${user.id}/profile.${profile.photo_url.split('.').pop()}`;
+      const { error: deleteError } = await supabase.storage
+        .from('profile-photos')
+        .remove([fileName]);
+
+      if (deleteError) {
+        console.error('Error deleting photo from storage:', deleteError);
+      }
+
+      // Actualizar perfil para quitar la URL
+      await updateProfile({ photo_url: null });
+
+      toast({
+        title: "Foto eliminada",
+        description: "La foto de perfil se eliminó correctamente",
+      });
+    } catch (error) {
+      console.error('Error removing photo:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "No se pudo eliminar la foto",
+      });
+    }
+  };
+
   return {
     profile,
     loading,
     updateProfile,
     uploadPhoto,
+    removePhoto,
     refetch: fetchProfile
   };
 }
