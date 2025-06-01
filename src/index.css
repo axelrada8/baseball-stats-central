@@ -56,8 +56,8 @@
     --popover: 0 0% 0%;
     --popover-foreground: 0 0% 100%;
 
-    --primary: 142 76% 36%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 0 0% 90%;
+    --primary-foreground: 0 0% 0%;
 
     --secondary: 0 0% 20%;
     --secondary-foreground: 0 0% 100%;
@@ -72,8 +72,8 @@
     --destructive-foreground: 0 0% 100%;
 
     --border: 0 0% 15%;
-    --input: 0 0% 0%;
-    --ring: 142 76% 36%;
+    --input: 0 0% 8%;
+    --ring: 0 0% 90%;
     
     --sidebar-background: 0 0% 0%;
     --sidebar-foreground: 0 0% 100%;
@@ -305,35 +305,4 @@
 
 .dark [role="option"]:hover {
   background-color: rgba(255, 255, 255, 0.1) !important;
-}
-
-/* Forzar todos los elementos de UI a ser negros en modo oscuro */
-.dark * {
-  border-color: rgba(255, 255, 255, 0.1) !important;
-}
-
-.dark [data-state="open"] {
-  background-color: #000000 !important;
-}
-
-/* Botones en modo oscuro */
-.dark .bg-primary {
-  background-color: #16a34a !important;
-}
-
-.dark .bg-primary:hover {
-  background-color: #15803d !important;
-}
-
-/* Tabs en modo oscuro */
-.dark [role="tabpanel"] {
-  background-color: #000000 !important;
-}
-
-.dark .bg-muted {
-  background-color: #000000 !important;
-}
-
-.dark .text-muted-foreground {
-  color: rgba(255, 255, 255, 0.6) !important;
 }
