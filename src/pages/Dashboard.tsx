@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -5,7 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
-import { CalendarIcon } from "@radix-ui/react-icons";
+import { Calendar as CalendarIcon } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
