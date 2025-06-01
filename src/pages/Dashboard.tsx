@@ -61,7 +61,7 @@ interface PitchingStats {
 // Traducciones
 const translations = {
   es: {
-    title: "⚾ Estadísticas de Béisbol",
+    title: "Estadísticas de Béisbol",
     greeting: "Hola",
     logout: "Cerrar Sesión",
     darkMode: "Modo Oscuro",
@@ -172,7 +172,7 @@ const translations = {
     allDates: "Todas las Fechas"
   },
   en: {
-    title: "⚾ Baseball Statistics",
+    title: "Baseball Statistics",
     greeting: "Hello",
     logout: "Logout",
     darkMode: "Dark Mode",
@@ -863,7 +863,7 @@ export default function Dashboard() {
     doc.setLineWidth(0.5);
     doc.line(20, 15, pageWidth - 20, 15); // Top line
     
-    // Title
+    // Title - fixed to remove the strange character
     doc.setFontSize(22);
     doc.setFont("helvetica", "bold");
     doc.text(t.title, pageWidth / 2, 25, { align: 'center' });
