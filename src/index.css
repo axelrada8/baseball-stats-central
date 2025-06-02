@@ -46,7 +46,7 @@
   }
 
   .dark {
-    /* NEGRO VERDADERO para el modo oscuro con imagen de fondo */
+    /* NEGRO VERDADERO para el modo oscuro con imagen de fondo del estadio */
     --background: 0 0% 0%;
     --foreground: 0 0% 100%;
 
@@ -84,11 +84,12 @@
     --sidebar-border: 0 0% 15%;
     --sidebar-ring: 0 0% 90%;
     
-    /* Imagen de fondo para modo oscuro */
-    background-image: linear-gradient(rgba(0, 0, 0, 0.85), rgba(0, 0, 0, 0.85)), url('/lovable-uploads/2f0a2e1e-42ac-4c64-b2c0-369b01f2d27f.png');
+    /* Imagen de fondo del estadio para modo oscuro - más visible y completa */
+    background-image: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), url('/lovable-uploads/68b71621-552f-4ed9-a0ac-37d6e6014987.png');
     background-size: cover;
     background-position: center;
     background-attachment: fixed;
+    background-repeat: no-repeat;
   }
 }
 
@@ -151,7 +152,8 @@
   border: 1px solid rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(12px);
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.9);
-  font-size: 1.05rem;
+  font-size: 1.1rem;
+  font-weight: 500;
 }
 
 .stat-card:hover {
@@ -163,32 +165,34 @@
   box-shadow: 0 12px 20px rgba(0, 0, 0, 0.9);
 }
 
-/* Colores específicos para las estadísticas avanzadas (AVG, OBP, SLG, OPS) */
+/* Color único azul claro para todas las estadísticas avanzadas (AVG, OBP, SLG, OPS) */
 .advanced-stat-card {
-  background-color: #7dd3fc !important; /* Azul claro relajante */
+  background-color: #bfdbfe !important; /* Azul claro con opacidad */
   color: #1e3a8a !important; /* Azul oscuro para contraste */
-  border: 1px solid #38bdf8;
+  border: 1px solid #93c5fd;
   transition: all 0.3s ease;
+  opacity: 0.9;
 }
 
 .dark .advanced-stat-card {
-  background-color: #0ea5e9 !important; /* Azul balanceado para modo oscuro */
-  color: #ffffff !important;
-  border: 1px solid #0284c7;
-  opacity: 0.9;
+  background-color: #bfdbfe !important; /* Mismo azul claro para modo oscuro */
+  color: #1e3a8a !important; /* Mismo azul oscuro para contraste */
+  border: 1px solid #93c5fd;
+  opacity: 0.85;
 }
 
 .advanced-stat-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 12px rgba(59, 130, 246, 0.3);
+  box-shadow: 0 8px 12px rgba(191, 219, 254, 0.4);
+  opacity: 1;
 }
 
 .dark .advanced-stat-card:hover {
-  opacity: 1;
-  box-shadow: 0 8px 12px rgba(14, 165, 233, 0.4);
+  opacity: 0.95;
+  box-shadow: 0 8px 12px rgba(191, 219, 254, 0.3);
 }
 
-/* Modo oscuro completamente NEGRO */
+/* Modo oscuro completamente NEGRO con imagen de estadio */
 .dark {
   color-scheme: dark;
   background-color: #000000 !important;
@@ -197,30 +201,31 @@
 .dark body {
   background-color: #000000 !important;
   color: #ffffff !important;
-  font-size: 1.05rem;
+  font-size: 1.1rem;
+  font-weight: 500;
 }
 
-/* Mejorar botones en modo oscuro */
+/* Mejorar botones en modo oscuro - cambiar a gris */
 .dark button {
   backdrop-filter: blur(8px);
-  font-size: 1.1rem !important;
-  font-weight: 500;
+  font-size: 1.2rem !important;
+  font-weight: 600;
   color: #ffffff !important;
 }
 
 .dark button:not(.bg-destructive):not(.bg-red-600):not(.bg-green-600) {
-  background-color: #1e40af !important;
-  border-color: #3b82f6 !important;
+  background-color: #4b5563 !important; /* Gris oscuro distintivo */
+  border-color: #6b7280 !important;
 }
 
 .dark button:hover:not(.bg-destructive):not(.bg-red-600):not(.bg-green-600) {
-  background-color: #1d4ed8 !important;
+  background-color: #374151 !important; /* Gris más oscuro al hover */
 }
 
 /* Botones en modo claro */
 button {
-  font-size: 1.1rem !important;
-  font-weight: 500;
+  font-size: 1.2rem !important;
+  font-weight: 600;
 }
 
 .dark input,
@@ -229,7 +234,7 @@ button {
   background-color: #000000 !important;
   border-color: rgba(255, 255, 255, 0.2) !important;
   color: white !important;
-  font-size: 1.05rem;
+  font-size: 1.1rem;
 }
 
 .dark .card {
@@ -274,13 +279,14 @@ button {
   color: hsl(var(--primary-foreground));
 }
 
-/* Photo adjustment styles */
+/* Photo adjustment styles - mejorados para arrastrar en el círculo */
 .photo-container {
   position: relative;
   overflow: hidden;
   width: 100%;
   height: 100%;
   cursor: move;
+  border-radius: 50%;
 }
 
 .photo-draggable {
@@ -288,6 +294,8 @@ button {
   transition: none;
   user-select: none;
   position: relative;
+  width: 100%;
+  height: 100%;
 }
 
 .photo-draggable:active {
@@ -340,13 +348,19 @@ button {
   background-color: rgba(255, 255, 255, 0.1);
 }
 
-/* Tab styling */
+/* Tab styling - cambiar a gris en modo oscuro */
 .dark [role="tablist"] {
   background-color: #000000 !important;
 }
 
+.dark [role="tab"] {
+  background-color: #4b5563 !important; /* Gris para tabs */
+  color: #ffffff !important;
+  border-color: #6b7280 !important;
+}
+
 .dark [role="tab"][data-state="active"] {
-  background-color: rgba(255, 255, 255, 0.1);
+  background-color: #374151 !important; /* Gris más oscuro para tab activo */
 }
 
 /* PDF title styling */

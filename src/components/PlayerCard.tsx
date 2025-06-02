@@ -1,4 +1,3 @@
-
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -84,6 +83,7 @@ export default function PlayerCard({ language, translations }: PlayerCardProps) 
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const photoRef = useRef<HTMLDivElement>(null);
 
   if (loading) {
     return (
@@ -127,21 +127,31 @@ export default function PlayerCard({ language, translations }: PlayerCardProps) 
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
     setIsDragging(true);
-    setDragStart({
-      x: e.clientX - position.x,
-      y: e.clientY - position.y
-    });
+    
+    const rect = photoRef.current?.getBoundingClientRect();
+    if (rect) {
+      setDragStart({
+        x: e.clientX - position.x,
+        y: e.clientY - position.y
+      });
+    }
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDragging) return;
+    if (!isDragging || !photoRef.current) return;
+    
+    e.preventDefault();
+    const rect = photoRef.current.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
     
     const newX = e.clientX - dragStart.x;
     const newY = e.clientY - dragStart.y;
     
-    // Limitar el movimiento dentro de los límites razonables
-    const maxMove = 100;
+    // Limitar el movimiento dentro del círculo
+    const maxMove = 50;
     setPosition({
       x: Math.max(-maxMove, Math.min(maxMove, newX)),
       y: Math.max(-maxMove, Math.min(maxMove, newY))
@@ -271,22 +281,23 @@ export default function PlayerCard({ language, translations }: PlayerCardProps) 
             <DialogContent className="sm:max-w-md bg-white dark:bg-black">
               <DialogTitle className="text-gray-900 dark:text-white">{t.adjustPhoto}</DialogTitle>
               <div className="flex flex-col items-center justify-center">
-                <div className="w-64 h-64 rounded-full overflow-hidden border-2 border-gray-200 dark:border-gray-700 photo-container">
+                <div 
+                  ref={photoRef}
+                  className="w-64 h-64 rounded-full overflow-hidden border-2 border-gray-200 dark:border-gray-700 relative"
+                  style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
+                  onMouseDown={handleMouseDown}
+                  onMouseMove={handleMouseMove}
+                  onMouseUp={handleMouseUp}
+                  onMouseLeave={handleMouseUp}
+                >
                   {tempPhoto && (
-                    <div 
-                      className="w-full h-full overflow-hidden photo-draggable"
-                      onMouseDown={handleMouseDown}
-                      onMouseMove={handleMouseMove}
-                      onMouseUp={handleMouseUp}
-                      onMouseLeave={handleMouseUp}
-                      style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
-                    >
+                    <div className="w-full h-full overflow-hidden">
                       <img 
                         src={tempPhoto} 
                         alt="Preview" 
                         className="object-cover w-full h-full"
                         style={{ 
-                          transform: `scale(${zoom / 100}) translate(${position.x / (zoom / 50)}px, ${position.y / (zoom / 50)}px)`,
+                          transform: `scale(${zoom / 100}) translate(${position.x / (zoom / 100)}px, ${position.y / (zoom / 100)}px)`,
                           transformOrigin: 'center',
                           pointerEvents: 'none'
                         }}
