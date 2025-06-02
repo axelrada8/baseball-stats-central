@@ -46,7 +46,7 @@
   }
 
   .dark {
-    /* NEGRO VERDADERO para el modo oscuro */
+    /* NEGRO VERDADERO para el modo oscuro con imagen de fondo */
     --background: 0 0% 0%;
     --foreground: 0 0% 100%;
 
@@ -83,6 +83,12 @@
     --sidebar-accent-foreground: 0 0% 100%;
     --sidebar-border: 0 0% 15%;
     --sidebar-ring: 0 0% 90%;
+    
+    /* Imagen de fondo para modo oscuro */
+    background-image: linear-gradient(rgba(0, 0, 0, 0.85), rgba(0, 0, 0, 0.85)), url('/lovable-uploads/2f0a2e1e-42ac-4c64-b2c0-369b01f2d27f.png');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
   }
 }
 
@@ -129,14 +135,57 @@
 
 .stat-card {
   transition: all 0.3s ease;
+}
+
+/* Colores específicos para las cards en modo claro */
+.stat-card {
+  background-color: white !important;
+  color: #1f2937 !important;
+  border: 1px solid #e5e7eb;
+}
+
+/* Colores específicos para las cards en modo oscuro */
+.dark .stat-card {
   background-color: #000000 !important;
-  color: white !important;
+  color: #ffffff !important;
   border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.9);
+  font-size: 1.05rem;
 }
 
 .stat-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.dark .stat-card:hover {
+  box-shadow: 0 12px 20px rgba(0, 0, 0, 0.9);
+}
+
+/* Colores específicos para las estadísticas avanzadas (AVG, OBP, SLG, OPS) */
+.advanced-stat-card {
+  background-color: #7dd3fc !important; /* Azul claro relajante */
+  color: #1e3a8a !important; /* Azul oscuro para contraste */
+  border: 1px solid #38bdf8;
+  transition: all 0.3s ease;
+}
+
+.dark .advanced-stat-card {
+  background-color: #0ea5e9 !important; /* Azul balanceado para modo oscuro */
+  color: #ffffff !important;
+  border: 1px solid #0284c7;
+  opacity: 0.9;
+}
+
+.advanced-stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 12px rgba(59, 130, 246, 0.3);
+}
+
+.dark .advanced-stat-card:hover {
+  opacity: 1;
+  box-shadow: 0 8px 12px rgba(14, 165, 233, 0.4);
 }
 
 /* Modo oscuro completamente NEGRO */
@@ -148,13 +197,30 @@
 .dark body {
   background-color: #000000 !important;
   color: #ffffff !important;
+  font-size: 1.05rem;
 }
 
-.dark .stat-card {
-  backdrop-filter: blur(12px);
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.9);
-  background-color: #000000 !important;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+/* Mejorar botones en modo oscuro */
+.dark button {
+  backdrop-filter: blur(8px);
+  font-size: 1.1rem !important;
+  font-weight: 500;
+  color: #ffffff !important;
+}
+
+.dark button:not(.bg-destructive):not(.bg-red-600):not(.bg-green-600) {
+  background-color: #1e40af !important;
+  border-color: #3b82f6 !important;
+}
+
+.dark button:hover:not(.bg-destructive):not(.bg-red-600):not(.bg-green-600) {
+  background-color: #1d4ed8 !important;
+}
+
+/* Botones en modo claro */
+button {
+  font-size: 1.1rem !important;
+  font-weight: 500;
 }
 
 .dark input,
@@ -163,10 +229,7 @@
   background-color: #000000 !important;
   border-color: rgba(255, 255, 255, 0.2) !important;
   color: white !important;
-}
-
-.dark button {
-  backdrop-filter: blur(8px);
+  font-size: 1.05rem;
 }
 
 .dark .card {
@@ -224,6 +287,11 @@
   cursor: move;
   transition: none;
   user-select: none;
+  position: relative;
+}
+
+.photo-draggable:active {
+  cursor: grabbing;
 }
 
 /* Better aspect ratio for photos */
@@ -310,7 +378,19 @@
   background-color: rgba(255, 255, 255, 0.1) !important;
 }
 
-/* Forzar fondo negro en las cards de estadísticas de bateo y pitcheo */
+/* Forzar fondo correcto en las cards de estadísticas */
+.bg-white {
+  background-color: white !important;
+}
+
+.dark .bg-white {
+  background-color: #000000 !important;
+}
+
 .bg-white.dark\:bg-gray-900 {
+  background-color: white !important;
+}
+
+.dark .bg-white.dark\:bg-gray-900 {
   background-color: #000000 !important;
 }

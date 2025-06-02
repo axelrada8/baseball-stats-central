@@ -80,6 +80,8 @@ export default function PlayerCard({ language, translations }: PlayerCardProps) 
   const [tempFile, setTempFile] = useState<File | null>(null);
   const [showPhotoDialog, setShowPhotoDialog] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -122,6 +124,32 @@ export default function PlayerCard({ language, translations }: PlayerCardProps) 
   const getPositionEmoji = (value: string) => {
     const position = positions.find(pos => pos.value === value);
     return position ? position.emoji : "";
+  };
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    setIsDragging(true);
+    setDragStart({
+      x: e.clientX - position.x,
+      y: e.clientY - position.y
+    });
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging) return;
+    
+    const newX = e.clientX - dragStart.x;
+    const newY = e.clientY - dragStart.y;
+    
+    // Limitar el movimiento dentro de los límites razonables
+    const maxMove = 100;
+    setPosition({
+      x: Math.max(-maxMove, Math.min(maxMove, newX)),
+      y: Math.max(-maxMove, Math.min(maxMove, newY))
+    });
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
   };
 
   const applyPhotoChanges = async () => {
@@ -243,17 +271,26 @@ export default function PlayerCard({ language, translations }: PlayerCardProps) 
             <DialogContent className="sm:max-w-md bg-white dark:bg-black">
               <DialogTitle className="text-gray-900 dark:text-white">{t.adjustPhoto}</DialogTitle>
               <div className="flex flex-col items-center justify-center">
-                <div className="w-64 h-64 rounded-full overflow-hidden border-2 border-gray-200 dark:border-gray-700">
+                <div className="w-64 h-64 rounded-full overflow-hidden border-2 border-gray-200 dark:border-gray-700 photo-container">
                   {tempPhoto && (
-                    <div className="w-full h-full overflow-hidden">
+                    <div 
+                      className="w-full h-full overflow-hidden photo-draggable"
+                      onMouseDown={handleMouseDown}
+                      onMouseMove={handleMouseMove}
+                      onMouseUp={handleMouseUp}
+                      onMouseLeave={handleMouseUp}
+                      style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
+                    >
                       <img 
                         src={tempPhoto} 
                         alt="Preview" 
                         className="object-cover w-full h-full"
                         style={{ 
                           transform: `scale(${zoom / 100}) translate(${position.x / (zoom / 50)}px, ${position.y / (zoom / 50)}px)`,
-                          transformOrigin: 'center'
+                          transformOrigin: 'center',
+                          pointerEvents: 'none'
                         }}
+                        draggable={false}
                       />
                     </div>
                   )}
