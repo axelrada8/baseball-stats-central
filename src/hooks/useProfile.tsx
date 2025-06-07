@@ -2,11 +2,11 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from './useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 
 interface Profile {
   id: string;
-  name: string | null;
+  name: string;
   position: string | null;
   team: string | null;
   photo_url: string | null;
