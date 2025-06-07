@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 
 interface RegisterProps {
@@ -68,7 +68,7 @@ export default function Register({ onRegister, onSwitchToLogin }: RegisterProps)
 
       toast({
         title: "¡Registro exitoso!",
-        description: `Bienvenido, ${name}. Tu cuenta fue creada correctamente.`,
+        description: `Bienvenido, ${name}. Ahora puedes elegir tu plan.`,
       });
 
       onRegister();
@@ -90,7 +90,7 @@ export default function Register({ onRegister, onSwitchToLogin }: RegisterProps)
       <CardHeader className="space-y-1">
         <CardTitle className="text-2xl font-bold text-center text-gray-900 dark:text-white">Crear una cuenta</CardTitle>
         <CardDescription className="text-center text-gray-600 dark:text-gray-300">
-          Regístrate para comenzar a registrar tus estadísticas
+          Regístrate para comenzar tu prueba gratuita de 7 días
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -144,7 +144,7 @@ export default function Register({ onRegister, onSwitchToLogin }: RegisterProps)
             />
           </div>
           <Button type="submit" className="w-full bg-green-600 hover:bg-green-700 text-white" disabled={isLoading}>
-            {isLoading ? "Registrando..." : "Registrarse"}
+            {isLoading ? "Registrando..." : "Comenzar Prueba Gratuita"}
           </Button>
         </form>
       </CardContent>

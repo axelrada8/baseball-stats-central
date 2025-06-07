@@ -60,6 +60,50 @@ export type Database = {
         }
         Relationships: []
       }
+      payments: {
+        Row: {
+          amount: number
+          created_at: string
+          currency: string
+          id: string
+          payment_method: string
+          paypal_payment_id: string
+          status: string
+          subscription_id: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          currency?: string
+          id?: string
+          payment_method: string
+          paypal_payment_id: string
+          status: string
+          subscription_id: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          id?: string
+          payment_method?: string
+          paypal_payment_id?: string
+          status?: string
+          subscription_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pitching_stats: {
         Row: {
           bb: number | null
@@ -138,15 +182,64 @@ export type Database = {
         }
         Relationships: []
       }
+      subscriptions: {
+        Row: {
+          amount: number | null
+          created_at: string
+          currency: string | null
+          end_date: string | null
+          id: string
+          paypal_subscription_id: string | null
+          plan_type: Database["public"]["Enums"]["plan_type"]
+          start_date: string
+          status: Database["public"]["Enums"]["subscription_status"]
+          trial_end_date: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount?: number | null
+          created_at?: string
+          currency?: string | null
+          end_date?: string | null
+          id?: string
+          paypal_subscription_id?: string | null
+          plan_type?: Database["public"]["Enums"]["plan_type"]
+          start_date?: string
+          status?: Database["public"]["Enums"]["subscription_status"]
+          trial_end_date?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number | null
+          created_at?: string
+          currency?: string | null
+          end_date?: string | null
+          id?: string
+          paypal_subscription_id?: string | null
+          plan_type?: Database["public"]["Enums"]["plan_type"]
+          start_date?: string
+          status?: Database["public"]["Enums"]["subscription_status"]
+          trial_end_date?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_premium_access: {
+        Args: { user_uuid: string }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      plan_type: "free" | "premium"
+      subscription_status: "active" | "cancelled" | "expired" | "trial"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -261,6 +354,9 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      plan_type: ["free", "premium"],
+      subscription_status: ["active", "cancelled", "expired", "trial"],
+    },
   },
 } as const
