@@ -23,25 +23,40 @@ export default function Register({ onRegister, onSwitchToLogin }: RegisterProps)
   const { signUp } = useAuth();
   const navigate = useNavigate();
 
+  const validateEmail = (email: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     
     try {
+      // Validaciones del lado del cliente
+      if (!name.trim() || !email.trim() || !password) {
+        toast({
+          variant: "destructive",
+          title: "Error en el registro",
+          description: "Por favor, complete todos los campos",
+        });
+        return;
+      }
+
+      if (!validateEmail(email)) {
+        toast({
+          variant: "destructive",
+          title: "Error en el registro",
+          description: "Por favor, ingrese un email válido (ejemplo: usuario@correo.com)",
+        });
+        return;
+      }
+      
       if (password !== confirmPassword) {
         toast({
           variant: "destructive",
           title: "Error en el registro",
           description: "Las contraseñas no coinciden",
-        });
-        return;
-      }
-      
-      if (!name || !email || !password) {
-        toast({
-          variant: "destructive",
-          title: "Error en el registro",
-          description: "Por favor, complete todos los campos",
         });
         return;
       }
@@ -55,19 +70,35 @@ export default function Register({ onRegister, onSwitchToLogin }: RegisterProps)
         return;
       }
 
+      console.log('Attempting to register with:', { email, name });
       const { error } = await signUp(email, password, name);
       
       if (error) {
+        console.error('Registration error:', error);
+        
+        let errorMessage = "Error al crear la cuenta";
+        
+        if (error.message.includes("already registered") || error.message.includes("User already registered")) {
+          errorMessage = "Este email ya está registrado. Intenta iniciar sesión.";
+        } else if (error.message.includes("invalid") && error.message.includes("email")) {
+          errorMessage = "El formato del email no es válido. Usa un email real (ejemplo: tu@correo.com)";
+        } else if (error.message.includes("Password")) {
+          errorMessage = "La contraseña no cumple con los requisitos";
+        } else if (error.message.includes("rate limit")) {
+          errorMessage = "Demasiados intentos. Espera un momento antes de intentar de nuevo.";
+        } else {
+          errorMessage = `Error: ${error.message}`;
+        }
+        
         toast({
           variant: "destructive",
           title: "Error en el registro",
-          description: error.message.includes("already registered") 
-            ? "Este email ya está registrado" 
-            : "Error al crear la cuenta",
+          description: errorMessage,
         });
         return;
       }
 
+      console.log('Registration successful, redirecting to plans');
       toast({
         title: "¡Registro exitoso!",
         description: `Bienvenido, ${name}. Ahora elige tu plan.`,
@@ -77,11 +108,11 @@ export default function Register({ onRegister, onSwitchToLogin }: RegisterProps)
       navigate('/plans');
       
     } catch (error) {
-      console.error('Error en el registro:', error);
+      console.error('Unexpected error during registration:', error);
       toast({
         variant: "destructive",
         title: "Error en el registro",
-        description: "Ocurrió un error inesperado. Inténtalo de nuevo.",
+        description: "Ocurrió un error inesperado. Verifica tu conexión e inténtalo de nuevo.",
       });
     } finally {
       setIsLoading(false);
@@ -102,7 +133,7 @@ export default function Register({ onRegister, onSwitchToLogin }: RegisterProps)
             <Label htmlFor="name" className="text-gray-700 dark:text-gray-300">Nombre completo</Label>
             <Input 
               id="name" 
-              placeholder="Tu nombre" 
+              placeholder="Tu nombre completo" 
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
@@ -114,9 +145,9 @@ export default function Register({ onRegister, onSwitchToLogin }: RegisterProps)
             <Input 
               id="email" 
               type="email" 
-              placeholder="tu@correo.com" 
+              placeholder="ejemplo@correo.com" 
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => setEmail(e.target.value.toLowerCase().trim())}
               required
               className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white"
             />
