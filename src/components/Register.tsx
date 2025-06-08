@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 
 interface RegisterProps {
   onRegister: () => void;
@@ -98,14 +99,60 @@ export default function Register({ onRegister, onSwitchToLogin }: RegisterProps)
         return;
       }
 
-      console.log('Registration successful, redirecting to plans');
-      toast({
-        title: "¡Registro exitoso!",
-        description: `Bienvenido, ${name}. Ahora elige tu plan.`,
-      });
-
-      // Redirigir directamente a la selección de planes después del registro exitoso
-      navigate('/plans');
+      console.log('Registration successful');
+      
+      // Obtener el plan seleccionado del localStorage
+      const selectedPlanData = localStorage.getItem('selectedPlan');
+      if (selectedPlanData) {
+        const planData = JSON.parse(selectedPlanData);
+        console.log('Plan data found:', planData);
+        
+        // Si es plan premium, redirigir a PayPal
+        if (planData.type === 'premium') {
+          toast({
+            title: "¡Registro exitoso!",
+            description: `Bienvenido, ${name}. Ahora procede con el pago de tu plan premium.`,
+          });
+          
+          // Actualizar la suscripción en la base de datos para reflejar el plan seleccionado
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            await supabase
+              .from('subscriptions')
+              .update({
+                plan_type: 'premium',
+                amount: planData.price,
+                currency: 'USD'
+              })
+              .eq('user_id', user.id);
+          }
+          
+          // Redirigir a PayPal checkout con los datos del plan
+          navigate('/payment', { 
+            state: { 
+              planType: planData.type,
+              billingCycle: planData.billing,
+              amount: planData.price
+            }
+          });
+        } else {
+          // Plan gratuito - redirigir directamente al dashboard
+          toast({
+            title: "¡Registro exitoso!",
+            description: `Bienvenido, ${name}. Tu prueba gratuita de 7 días ha comenzado.`,
+          });
+          navigate('/dashboard');
+        }
+        
+        localStorage.removeItem('selectedPlan');
+      } else {
+        // Sin plan seleccionado, redirigir al dashboard
+        toast({
+          title: "¡Registro exitoso!",
+          description: `Bienvenido, ${name}.`,
+        });
+        navigate('/dashboard');
+      }
       
     } catch (error) {
       console.error('Unexpected error during registration:', error);
@@ -124,7 +171,7 @@ export default function Register({ onRegister, onSwitchToLogin }: RegisterProps)
       <CardHeader className="space-y-1">
         <CardTitle className="text-2xl font-bold text-center text-gray-900 dark:text-white">Crear una cuenta</CardTitle>
         <CardDescription className="text-center text-gray-600 dark:text-gray-300">
-          Regístrate para comenzar tu prueba gratuita de 7 días
+          Regístrate para comenzar
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -178,7 +225,7 @@ export default function Register({ onRegister, onSwitchToLogin }: RegisterProps)
             />
           </div>
           <Button type="submit" className="w-full bg-green-600 hover:bg-green-700 text-white" disabled={isLoading}>
-            {isLoading ? "Registrando..." : "Comenzar Prueba Gratuita"}
+            {isLoading ? "Registrando..." : "Crear Cuenta"}
           </Button>
         </form>
       </CardContent>

@@ -2,9 +2,9 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from '@/hooks/useAuth';
-import Index from '@/pages/Index';
+import Landing from '@/pages/Landing';
 import Dashboard from '@/pages/Dashboard';
-import Plans from '@/pages/Plans';
+import Payment from '@/pages/Payment';
 import NotFound from '@/pages/NotFound';
 
 function App() {
@@ -13,9 +13,9 @@ function App() {
       <Router>
         <div className="min-h-screen bg-background">
           <Routes>
-            <Route path="/" element={<Index />} />
+            <Route path="/" element={<Landing />} />
             <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/plans" element={<Plans />} />
+            <Route path="/payment" element={<Payment />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
           <Toaster />
