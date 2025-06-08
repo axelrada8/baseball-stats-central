@@ -32,6 +32,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('Initial session:', session);
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
@@ -41,32 +42,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signUp = async (email: string, password: string, name: string) => {
-    const redirectUrl = `${window.location.origin}/plans`;
+    console.log('Signing up user:', email, name);
     
-    const { error } = await supabase.auth.signUp({
+    const { error, data } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: redirectUrl,
         data: {
           name: name
         }
       }
     });
     
+    console.log('SignUp result:', { error, data });
     return { error };
   };
 
   const signIn = async (email: string, password: string) => {
+    console.log('Signing in user:', email);
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password
     });
     
+    console.log('SignIn result:', { error });
     return { error };
   };
 
   const signOut = async () => {
+    console.log('Signing out user');
     await supabase.auth.signOut();
   };
 
