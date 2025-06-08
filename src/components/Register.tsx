@@ -68,7 +68,7 @@ export default function Register({ onRegister, onSwitchToLogin }: RegisterProps)
 
       toast({
         title: "¡Registro exitoso!",
-        description: `Bienvenido, ${name}. Ahora puedes elegir tu plan.`,
+        description: `Bienvenido, ${name}. Ahora elige tu plan.`,
       });
 
       onRegister();

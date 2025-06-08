@@ -14,7 +14,8 @@ const Index = () => {
   };
 
   const handleRegister = () => {
-    navigate("/dashboard");
+    // Después del registro, redirigir a selección de planes
+    navigate("/plans");
   };
 
   return (

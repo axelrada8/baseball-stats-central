@@ -31,6 +31,7 @@ export function useProfile() {
     if (!user) return;
 
     try {
+      console.log('Fetching profile for user:', user.id);
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -43,8 +44,10 @@ export function useProfile() {
       }
 
       if (data) {
+        console.log('Profile found:', data);
         setProfile(data);
       } else {
+        console.log('No profile found, creating new one');
         // Crear perfil si no existe
         const newProfile = {
           id: user.id,
@@ -63,6 +66,7 @@ export function useProfile() {
         if (createError) {
           console.error('Error creating profile:', createError);
         } else {
+          console.log('Profile created:', createdProfile);
           setProfile(createdProfile);
         }
       }
@@ -77,6 +81,7 @@ export function useProfile() {
     if (!user || !profile) return;
 
     try {
+      console.log('Updating profile with:', updates);
       const { data, error } = await supabase
         .from('profiles')
         .update(updates)
@@ -85,6 +90,7 @@ export function useProfile() {
         .single();
 
       if (error) {
+        console.error('Error updating profile:', error);
         toast({
           variant: "destructive",
           title: "Error",
@@ -93,6 +99,7 @@ export function useProfile() {
         return;
       }
 
+      console.log('Profile updated:', data);
       setProfile(data);
       toast({
         title: "Perfil actualizado",
@@ -112,6 +119,7 @@ export function useProfile() {
     if (!user) return null;
 
     try {
+      console.log('Uploading photo for user:', user.id);
       // Crear nombre único para el archivo
       const fileExt = file.name.split('.').pop();
       const fileName = `${user.id}/profile.${fileExt}`;
@@ -122,6 +130,7 @@ export function useProfile() {
         .upload(fileName, file, { upsert: true });
 
       if (uploadError) {
+        console.error('Error uploading photo:', uploadError);
         toast({
           variant: "destructive",
           title: "Error",
@@ -135,6 +144,7 @@ export function useProfile() {
         .from('profile-photos')
         .getPublicUrl(fileName);
 
+      console.log('Photo uploaded, public URL:', data.publicUrl);
       return data.publicUrl;
     } catch (error) {
       console.error('Error uploading photo:', error);
@@ -151,6 +161,7 @@ export function useProfile() {
     if (!user || !profile?.photo_url) return false;
 
     try {
+      console.log('Deleting photo for user:', user.id);
       // Extraer el path del archivo de la URL
       const fileName = `${user.id}/profile.jpg`; // Asumimos extensión jpg por defecto
       
