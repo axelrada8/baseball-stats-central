@@ -14,8 +14,8 @@ const Index = () => {
   };
 
   const handleRegister = () => {
-    // Después del registro, redirigir a selección de planes
-    navigate("/plans");
+    // Ya no es necesario hacer nada aquí porque el componente Register 
+    // maneja la navegación directamente después del registro exitoso
   };
 
   return (

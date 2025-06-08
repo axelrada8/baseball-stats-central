@@ -27,6 +27,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
+
+        // Si el usuario se desconecta, redirigir a la página principal
+        if (event === 'SIGNED_OUT') {
+          window.location.href = '/';
+        }
       }
     );
 
@@ -71,7 +76,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     console.log('Signing out user');
-    await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      console.error('Error signing out:', error);
+    } else {
+      // Forzar limpieza del estado local
+      setUser(null);
+      setSession(null);
+      // Redirigir inmediatamente a la página principal
+      window.location.href = '/';
+    }
   };
 
   return (

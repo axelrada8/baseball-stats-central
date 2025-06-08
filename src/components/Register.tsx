@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useNavigate } from "react-router-dom";
 
 interface RegisterProps {
   onRegister: () => void;
@@ -20,6 +21,7 @@ export default function Register({ onRegister, onSwitchToLogin }: RegisterProps)
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const { signUp } = useAuth();
+  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,7 +73,8 @@ export default function Register({ onRegister, onSwitchToLogin }: RegisterProps)
         description: `Bienvenido, ${name}. Ahora elige tu plan.`,
       });
 
-      onRegister();
+      // Redirigir directamente a la selección de planes después del registro exitoso
+      navigate('/plans');
       
     } catch (error) {
       console.error('Error en el registro:', error);
