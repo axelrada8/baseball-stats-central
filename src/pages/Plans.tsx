@@ -8,7 +8,7 @@ import { useSubscription } from '@/hooks/useSubscription';
 
 export default function Plans() {
   const [selectedPlan, setSelectedPlan] = useState<{
-    type: 'free' | 'premium';
+    type: 'premium';
     billing: 'monthly' | 'yearly';
   } | null>(null);
   const navigate = useNavigate();
@@ -28,6 +28,7 @@ export default function Plans() {
       return;
     }
 
+    // Solo para plan premium
     setSelectedPlan({
       type: planType,
       billing: billingCycle
